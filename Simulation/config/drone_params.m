@@ -29,14 +29,16 @@ min_rotor_speed = 0;      % Min motor angular velocity (rad/s)
 % Maps squared rotor speeds [Omega1^2; Omega2^2; Omega3^2; Omega4^2] 
 % to total thrust and moments [F_total; Tau_x; Tau_y; Tau_z]
 % Configured for standard 'X' frame geometry:
-M_mix = [
-    C_T,        C_T,        C_T,        C_T;         % Total Thrust
-    -C_T*l*0.707, C_T*l*0.707, C_T*l*0.707,-C_T*l*0.707; % Roll Moment (Tau_x)
-    -C_T*l*0.707,-C_T*l*0.707, C_T*l*0.707, C_T*l*0.707; % Pitch Moment (Tau_y)
-    -C_Q,        C_Q,       -C_Q,        C_Q          % Yaw Moment (Tau_z)
-    ];
+% Forward allocation matrix (Rotor Speeds^2 -> [Fz; Tx; Ty; Tz])
+M = [
+    C_T,           C_T,           C_T,           C_T;         
+   -C_T*l*0.707,   C_T*l*0.707,   C_T*l*0.707,  -C_T*l*0.707; 
+   -C_T*l*0.707,  -C_T*l*0.707,   C_T*l*0.707,   C_T*l*0.707; 
+   -C_Q,           C_Q,          -C_Q,           C_Q          
+];
 
-M_mix_inv = pinv(M_mix);   % Inverse mixer for controller allocation
+% Control mixing matrix ([Fz; Tx; Ty; Tz] -> Rotor Speeds^2)
+m_mix = inv(M);  % Inverse mixer for controller allocation
 
 %% 5. Simulation Initial Conditions
 init_pos = [0; 0; 0];      % Initial Position [x, y, z] (m)
