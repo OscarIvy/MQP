@@ -1,0 +1,14 @@
+# MATLAB / Simulink Autosaves and Caches
+*.asv
+*.slxc
+*.mex*
+slprj/
+
+# MATLAB Code Generation & Report Folders
+*_erd/
+html/
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+.vscode/
