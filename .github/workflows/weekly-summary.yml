@@ -1,0 +1,28 @@
+name: Weekly Work Summary
+
+on:
+  workflow_dispatch: # Enables manual trigger from GitHub UI / API
+  schedule:
+    - cron: '0 17 * * 5' # Optional: Keep the scheduled run, or delete this line to ONLY run manually
+
+jobs:
+  summarize-weekly-work:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install requests openai
+
+      - name: Fetch Weekly Data and Generate Summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python .github/scripts/generate_weekly_summary.py
