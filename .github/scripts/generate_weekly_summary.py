@@ -3,8 +3,9 @@ import sys
 import datetime
 import requests
 from google import genai
+from google.genai import types
 
-# 1. Read Environment Variables
+# 1. Read Environment Variables from GitHub Actions
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 REPO = os.getenv("GITHUB_REPOSITORY")
@@ -36,11 +37,7 @@ for item in items:
 
 activity_text = "\n".join(completed_items) if completed_items else "No closed issues or merged PRs found in the past 14 days."
 
-# 3. Generate Summary Using Gemini API (Free Tier)
-# 3. Generate Summary Using Gemini API (Free Tier)
-from google.genai import types
-
-# 3. Generate Summary Using Gemini API (Free Tier)
+# 3. Generate Summary Using Gemini API
 try:
     client = genai.Client(api_key=GEMINI_API_KEY)
     
@@ -58,14 +55,30 @@ Please generate a concise, executive-level bi-weekly summary with the following 
 """
 
     response = client.models.generate_content(
-        model="gemini-2.0-flash",
+        model="gemini-3.8-flash",
         contents=prompt,
         config=types.GenerateContentConfig(
             temperature=0.2,
+            tools=[]
         )
     )
     summary_md = response.text
 
 except Exception as e:
     print(f"Gemini API Error: {e}")
+    sys.exit(1)
+
+# 4. Post Summary as a New GitHub Issue
+post_url = f"https://api.github.com/repos/{REPO}/issues"
+issue_payload = {
+    "title": f"Bi-Weekly Engineering Summary ({datetime.date.today()})",
+    "body": summary_md,
+    "labels": ["documentation"]
+}
+
+post_response = requests.post(post_url, headers=headers, json=issue_payload)
+if post_response.status_code == 201:
+    print("Bi-weekly summary issue created successfully!")
+else:
+    print(f"Failed to create issue: {post_response.status_code} - {post_response.text}")
     sys.exit(1)
