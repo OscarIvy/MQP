@@ -1,0 +1,24 @@
+name: "File Upload / Resource Submission"
+description: "Upload CAD models, Excel spreadsheets, or documentation to the repo"
+title: "[UPLOAD]: "
+labels: ["file-submission"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form to submit engineering files (CAD, Excel, PDFs) directly into the repository.
+  - type: input
+    id: uploader
+    attributes:
+      label: "Your Name / System Component"
+      placeholder: "e.g., Frame CAD, Battery Budget Sheet"
+    validations:
+      required: true
+  - type: textarea
+    id: attachments
+    attributes:
+      label: "Attach Files"
+      description: "Drag and drop your files here (.step, .stl, .xlsx, .pdf, etc.)"
+      placeholder: "Drop files here..."
+    validations:
+      required: true
