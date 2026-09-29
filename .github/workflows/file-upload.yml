@@ -79,16 +79,34 @@ jobs:
           fi
 
           mkdir -p CAD Excel Documents
+          work=$(mktemp -d)
+
+          # Route one file (name, path) into CAD/, Excel/ or Documents/ by extension
+          sort_file() {
+            case "${1,,}" in
+              *.step|*.stp|*.stl|*.f3d|*.sldprt) dest=CAD ;;
+              *.xlsx|*.xls|*.csv)                dest=Excel ;;
+              *)                                 dest=Documents ;;
+            esac
+            mv -f "$2" "$dest/$1"
+          }
+
           for url in $URLS; do
             filename=$(basename "$url")
             echo "Downloading $filename..."
             # -f: fail on HTTP errors instead of saving an error page as the file
-            curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "$url" -o "tmp_$filename"
-            case "${filename,,}" in
-              *.step|*.stp|*.stl|*.f3d|*.sldprt) mv "tmp_$filename" "CAD/$filename" ;;
-              *.xlsx|*.xls|*.csv)                mv "tmp_$filename" "Excel/$filename" ;;
-              *)                                 mv "tmp_$filename" "Documents/$filename" ;;
-            esac
+            curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "$url" -o "$work/$filename"
+
+            if [[ "${filename,,}" == *.zip ]]; then
+              echo "Unpacking $filename..."
+              unzip -oq "$work/$filename" -d "$work/unzipped_$filename"
+              # Flatten contents into the category folders, skipping macOS junk
+              while IFS= read -r -d '' f; do
+                sort_file "$(basename "$f")" "$f"
+              done < <(find "$work/unzipped_$filename" -type f ! -path '*/__MACOSX/*' ! -name '.DS_Store' -print0)
+            else
+              sort_file "$filename" "$work/$filename"
+            fi
           done
 
           git config user.name "github-actions[bot]"
