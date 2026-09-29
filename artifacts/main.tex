@@ -1,0 +1,733 @@
+\documentclass[11pt]{article}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{titlesec}
+\usepackage{pgfplotstable}
+\usepackage{soul}
+\usepackage{xcolor} 
+\usepackage{booktabs}
+
+\usepackage{siunitx} 
+\usepackage{calligra}
+\usepackage{enumitem}
+\usepackage{changepage}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage{url}        
+\usepackage[nottoc]{tocbibind}
+\usepackage{caption}
+\usepackage{array}
+\usepackage{cancel}
+\usepackage{chngcntr}
+\usepackage{makecell}
+\usepackage[authoryear,round]{natbib}
+\usepackage{standalone} 
+\usepackage{tikz}
+\usepackage{newtxtext}
+\usepackage{newtxmath}
+\usepackage[dvipsnames]{xcolor}
+\usetikzlibrary{calc, arrows.meta, angles, quotes}
+\usetikzlibrary{decorations.pathmorphing}
+\usetikzlibrary{arrows.meta,bending,shapes.geometric}
+\DeclareCaptionFormat{justifiedbold}{
+  \bfseries#1#2\normalfont#3
+}
+\captionsetup[figure]{format=justifiedbold, justification=justified, singlelinecheck=false, position=top}
+\captionsetup[table]{format=justifiedbold, justification=justified, singlelinecheck=false, position=top}
+
+\newenvironment{figtable}[1][h!]{
+  \begin{figure}[#1]
+  \centering
+  \begin{tabular}{c}
+}{
+  \end{tabular}Experiment with different threshold
+  \end{figure}
+}
+
+\newcommand{\vol}{\text{\reflectbox{\rotatebox[origin=c]{180}{A}}}}
+\renewcommand{\thesection}{\Roman{section}.}
+\renewcommand{\thesubsection}{\thesection\alph{subsection}}
+\renewcommand{\thetable}{\thesubsection\arabic{table}}
+\counterwithin{table}{subsection}
+
+\newcommand{\greencheck}{^{\textcolor{green!70!black}{\checkmark}}}
+\newcommand{\redcancel}[1]{{\color{red}\cancel{\color{black}#1}}}
+
+\title{Simulink Model Of AUUV}
+\author{Oscar Ivy}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\section{Introduction}
+The purpose of this work is to develop a "Digital 
+\section{Quadrotor Dynamics}
+
+
+%Introduction to quadrotor Dynamics
+{\tiny
+"The quadrotor vehicle operates on the concept of variable torques and thrusts. Each rotor consists of a brushless DC motor and rotor with a fixed pitch. The motors are arranged in pairs along the horizontal and vertical axes with the forward pair rotating clockwise and the horizontal pair rotating counter-clockwise. This design results in the reaction torques from the pairs of motors being exactly opposed by each other if they are all spinning at the same speed. The elimination of the rotating moment allows the vehicle to maintain a constant heading while hovering. Yaw is controlled by varying the speeds of the pairs of motors to create a non-zero net counter torque. Altitude is controlled by varying the thrust from each motor by equal amounts to provide a net thrust vector and without a rotational moment. To move in the lateral directions, the relative speeds of each motor in the lateral pair are varied to create a desired lateral thrust offset. The simple design results in small platforms which are battery operated, able to perform a stable hover, and safe to use in indoor environments. The quadrotor is classified as an under-actuated system. While the quadrotor can move in 6 degrees of freedom (3 translational and 3 rotational), there are only 4 inputs that can be controlled (the speeds of the 4 motors). As will be shown below, the rotational and translational dynamics are coupled which presents an interesting control problem" -Wilselby (rephrase for our design) }
+
+%Total List of assumptions made 
+\subsection{Assumptions}
+From Wilselby:
+\begin{itemize}
+    \item The quadrotor structure is rigid and symmetrical with a center of mass aligned with the center of the body frame of the vehicle.
+    \item The thrust and drag of each motor is proportional to the square of the motor velocity.
+    \item The propellers are considered to be rigid and therefore blade flapping is negligible (deformation of propeller blades due to high velocities and flexible material).
+    \item The Earth is flat and non-rotating (difference of gravity by altitude or the spin of the earth is negligible)
+    \item Surrounding fluid velocities (wind) are negligible.
+    \item Ground effect is negligible.
+\end{itemize}
+
+%Relating Coordinate Frames
+\subsection{Coordinate Frames}
+
+%
+\subsubsection{$R_b^G$ Rotational Matrix}
+The place I'm choosing to start here is just from a simple drawing of the situation we're dealing with. We have a world frame in which inertial forces are felt and acted in, in relation to that we have the body frame of the quadrotor. The world frame is the standard North East Down (corresponding to xyz respectively), where the body frame is "attatched" to the quadrotors center of mass, and, it's orientation is "attatched" to the orientation of the quadrotor. Given that the Vehicle we're modeling will have a camera on the "front" of it, we will chose that direction to be the x direction. A very simple drawing of these coordinate frames and their relation to one another can be seen below in Figure 
+\ref{fig:GBF}  
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\linewidth]{GBF.png}
+    \caption{Relevant Frames and Parameters}
+    \label{fig:GBF}
+\end{figure}
+\noindent These frames produce the following parameters. Note that the body roll rates (pqr) aren't shown, but, are the first derivatives of roll pitch and yaw respectively. 
+\small
+    \begin{align*}
+    X_G  &= \text{the global (North) position of the quadrotor (m)}\\
+    Y_G  &= \text{the global (East) position of the quadrotor (m)}\\
+    Z_G  &= \text{the global (Down) position of the quadrotor (m)}\\
+    x_b  &= \text{the local (North) position of the quadrotor (m)}\\
+    y_b  &= \text{the global (East) position of the quadrotor (m)}\\
+    z_b &= \text{the global (Down) position of the quadrotor (m)}\\
+    \phi  &= \text{roll angle along $x_b$ (radians)}\\
+    \theta &= \text{pitch angle along $y_b$ (radians)}\\
+    \psi &=\text{yaw angle along $z_b$ (radians)}\\
+    p &= \text{roll rate along + $x_b$ (radians/second)}\\
+    q &= \text{pitch rate along + $y_b$ (radians/second)}\\
+    r &= \text{yaw rate along + $z_b$ (radians/second)}
+\end{align*}
+Given that the relevant motion, rotation, and sensors are all happening on the body of the quadrotor, we need a way to translate state information from the body frame to the Global frame. This is done using a rotational matrix ($R_b^G$) such that:
+$$\begin{bmatrix}
+    X_G\\Y_G\\Z_G
+\end{bmatrix} = R^G_b\begin{bmatrix}
+    x_b\\y_b\\z_b
+\end{bmatrix}$$
+For this derivation we will make use of a sequence of Euler transformations. Rotational matrixes governing rotations about the principal axis' are defined by the following equations. 
+
+$$
+    R_x(\phi) = \begin{bmatrix}
+        1&0&0\\0&\cos\phi&-\sin\phi&\\0&\sin\phi&cos\phi
+    \end{bmatrix},\;\;
+    R_y(\theta) =\begin{bmatrix}
+        \cos\theta&0&\sin\theta\\0&1&0\\-\sin\theta&0&\cos\theta
+    \end{bmatrix},\;\;
+    R_z(\psi) = \begin{bmatrix}
+        \cos\psi & -\sin\psi &0\\\sin\psi&\cos\psi & 0\\0&0&1
+    \end{bmatrix}
+$$
+Using The Standard Z-Y-X Euler Sequence to get $R_b^G$:
+$$R_b^G = R_z(\psi) R_y(\theta) R_x(\phi) = \begin{bmatrix} \cos\psi & -\sin\psi & 0 \\ \sin\psi & \cos\psi & 0 \\ 0 & 0 & 1 \end{bmatrix} \begin{bmatrix} \cos\theta & 0 & \sin\theta \\ 0 & 1 & 0 \\ -\sin\theta & 0 & \cos\theta \end{bmatrix} \begin{bmatrix} 1 & 0 & 0 \\ 0 & \cos\phi & -\sin\phi \\ 0 & \sin\phi & \cos\phi \end{bmatrix}$$
+\begin{equation} R_b^G = \begin{bmatrix}  \cos\psi\cos\theta & \cos\psi\sin\theta\sin\phi - \sin\psi\cos\phi & \cos\psi\sin\theta\cos\phi + \sin\psi\sin\phi \\ \sin\psi\cos\theta & \sin\psi\sin\theta\sin\phi + \cos\psi\cos\phi & \sin\psi\sin\theta\cos\phi - \cos\psi\sin\phi \\ -\sin\theta & \cos\theta\sin\phi & \cos\theta\cos\phi  
+\end{bmatrix}
+\label{eq:R_b^G}\end{equation}
+
+
+\subsubsection{Kinematic Relationship Between Body Rates and Euler Rates}
+Given that the euler angles (and therefore rates) occur in a ZYX sequence as shown in the previous section, and, the body rates occur in the final transformed frame, the two must be related via a series of rotations. Following the ZYX rotation our euler angles measure the following:
+
+\begin{itemize}
+    \item Yaw ($\psi$): Rotation about the initial inertial $Z$-axis ($Z_0$) by angle $\psi$.
+    \item Pitch ($\theta$): Rotation about the intermediate $y'$-axis by angle $\theta$.
+    \item Roll ($\phi$): Rotation about the final body $x''$-axis (or $x_b$) by angle $\phi$.
+\end{itemize}
+Meaning, the angular velocity of each would be defined:
+
+\begin{itemize}
+    \item $\dot{\psi}$ acts along the inertial $Z_0$-axis: $\boldsymbol{\omega}_{\psi} = [0, 0, \dot{\psi}]^T$
+    \item $\dot{\theta}$ acts along the intermediate $y'$-axis: $\boldsymbol{\omega}_{\theta} = [0, \dot{\theta}, 0]^T$
+    \item $\dot{\phi}$ acts along the body $x_b$-axis: $\boldsymbol{\omega}_{\phi} = [\dot{\phi}, 0, 0]^T$
+\end{itemize}
+\textbf{Transforming Rates to the Body Axis:}\\
+\noindent The first derivative of \textit{roll} ($\dot{\phi}$) already acts along the body $x_b$-axis, and therefore can be simply defined:
+$$\boldsymbol{\omega}_{\phi}^B = \begin{bmatrix} \dot{\phi} \\ 0 \\ 0 \end{bmatrix}$$
+
+\noindent The first derivative of \textit{pitch} ($\dot{\theta}$) acts along the intermediate y' axis, and, therefore must be rotated by $\phi$ about the x-axis: 
+$$\boldsymbol{\omega}_{\theta}^B = R_x(\phi) \begin{bmatrix} 0 \\ \dot{\theta} \\ 0 \end{bmatrix} = \begin{bmatrix} 1 & 0 & 0 \\ 0 & \cos\phi & -\sin\phi \\ 0 & \sin\phi & \cos\phi \end{bmatrix} \begin{bmatrix} 0 \\ \dot{\theta} \\ 0 \end{bmatrix}$$
+ $$\boldsymbol{\omega}_{\theta}^B= \begin{bmatrix} 0 \\ \dot{\theta}\cos\phi \\ \dot{\theta}\sin\phi \end{bmatrix}$$
+\noindent The first derivative of \textit{yaw} ($\dot{\psi}$) acts along the inertial $Z_o$-axis and therefore must be rotated twice (by the pitch angle and roll angle). 
+$$\boldsymbol{\omega}_{\psi}^B = R_x(\phi) R_y(\theta) \begin{bmatrix} 0 \\ 0 \\ \dot{\psi} \end{bmatrix} = \begin{bmatrix} 1 & 0 & 0 \\ 0 & \cos\phi & -\sin\phi \\ 0 & \sin\phi & \cos\phi \end{bmatrix} \begin{bmatrix} \cos\theta & 0 & \sin\theta \\ 0 & 1 & 0 \\ -\sin\theta & 0 & \cos\theta \end{bmatrix} \begin{bmatrix} 0 \\ 0 \\ \dot{\psi} \end{bmatrix}$$
+$$\boldsymbol{\omega}_{\psi}^B = \begin{bmatrix} -\dot{\psi}\sin\theta \\ \dot{\psi}\cos\theta\sin\phi \\ \dot{\psi}\cos\theta\cos\phi \end{bmatrix}$$
+\textbf{Summing components to form $\omega^B$}
+$$\begin{bmatrix} p \\ q \\ r \end{bmatrix} = \boldsymbol{\omega}_{\phi}^B + \boldsymbol{\omega}_{\theta}^B + \boldsymbol{\omega}_{\psi}^B = \begin{bmatrix} \dot{\phi} - \dot{\psi}\sin\theta \\ \dot{\theta}\cos\phi + \dot{\psi}\cos\theta\sin\phi \\ -\dot{\theta}\sin\phi + \dot{\psi}\cos\theta\cos\phi \end{bmatrix}$$
+Re-writing this expression in Matrix form, we get a matrix that maps Euler rates to body rates:
+$$\begin{bmatrix} p \\ q \\ r \end{bmatrix} = \begin{bmatrix} 1 & 0 & -\sin\theta \\ 0 & \cos\phi & \cos\theta\sin\phi \\ 0 & -\sin\phi & \cos\theta\cos\phi \end{bmatrix} \begin{bmatrix} \dot{\phi} \\ \dot{\theta} \\ \dot{\psi} \end{bmatrix}$$
+Inverting the matrix gives a matrix which maps body rates to euler rates: 
+\begin{equation}\begin{bmatrix} \dot{\phi} \\ \dot{\theta} \\ \dot{\psi} \end{bmatrix} = \begin{bmatrix} 1 & \sin\phi\tan\theta & \cos\phi\tan\theta \\ 0 & \cos\phi & -\sin\phi \\ 0 & \frac{\sin\phi}{\cos\theta} & \frac{\cos\phi}{\cos\theta} \end{bmatrix}\begin{bmatrix} p \\ q \\ r \end{bmatrix}\end{equation}
+
+\noindent If the Euler Angles of the quadrotor are assumed to be small during flight ($\le 10^o)$, the small angle assumption can be used which will turn the matrix above into the \textit{identity matrix} such that the body rates are roughtly equal to the first derivative of the euler angles. \vspace{0.5cm}
+\\
+\hl{\textbf{A note on Gimbal Lock}}\\
+Given the physical limitations of our robot and its specific use case, we never intend to command our drone to any large pitch angles. However, in equation (2) you can see clearly where gimbal lock could become an issue in this approach. Should $\theta$ approach $90^o$, the two terms in the third row with $\theta$ in the denominator would approach infinity and the kinematics would break. This is called gimbal lock and it represents a possible singularity. For this reason, quaternions are often used for kinematics of a quadrotor. However, as stated, this shouldn't be an issue in our use case.  
+
+\section{Forces and Moments in the Body Frame}
+For now, we'll focus on aerial flight with no wind, leaving us with really three forces of concern. 
+\begin{enumerate}
+    \item Thrust force felt from combination of rotor thrusts
+    \item Drag on the vehicle
+    \item Effects of Gravity (weight)
+\end{enumerate}
+\subsection{Rotor Thrust}
+\subsubsection{Power Draw}
+Before jumping into the mixing of the motor thrusts, we will first consider a first principal approach to the motor power we can expect to be drawn. Starting with the information we're given about motor specs RPM per V or KV:
+$$KV^* = \frac{RPM}{V}$$
+Converting to SI Units:
+$$\frac{rad/s}{V} = \frac{\text{rot/min}}{V}\frac{(2\pi \text{ rad})/(60 s)}{1}= \frac{KV^*\cdot2\pi}{60}$$
+The inverse of this ratio is the theoretical back emf constant ($K_v$), or, the voltage created in the brush-less motors by their motion.  $$K_v = \frac{V}{rad/s} = \frac{60}{KV^*\cdot2\pi} $$ 
+Another parameter of interest is the Torque per Amp ($K_t = \frac{Nm}{A}$). It can be shown that This parameter is equivalent to the theoretical back emf ($K_t = K_v$). Starting with the expression for electrical and rotational power:
+$$P_e = IV\;\;\;P_r = \tau\omega$$
+Where I = current, V = voltage, $\tau$ = torque, and $\omega$=angular velocity. Here, only examining the electric power consumed by the motors ($P_e = P_m$). 
+\begin{align*}
+IV &= \tau\omega
+\intertext{Rearranging: }
+\frac{\tau}{I} &=\frac{V}{\omega}
+\intertext{In Si Units:}
+\frac{N\cdot m}{A} &= \frac{V}{\text{rad/s}}
+\intertext{This gives us:}
+&\boxed{K_t = K_v =\frac{60}{KV^*\cdot2\pi} }
+\end{align*}
+\\
+\noindent We can express the torque as a function of ($K_t$):
+$$\tau = K_t(I-I_o)$$ Where $I_o$ is the "No-load current", another motor spec which it typically given with a motor. This is the current at which the motor operates and generates 0 torque. Increases in current after this will scale with $K_t$. Solving for current we get the expression:
+$$I =\frac{\tau}{K_t}+I_o $$
+Here we will model the Voltage to be the standard $V=IR$ plus the back emf created by the motors governed by the theoretical back emf coefficient ($K_v$) dervied earlier:
+$$V = IR_m + K_v\omega$$
+Where $R_m$ is the motor resistance, this is a value in ohms and is also typically included in a motors spec sheet. We can substitute these values for voltage and current into the equation for electric power:
+\begin{align*}
+    P_e&=IV=\left(\frac{\tau}{K_t}+I_o \right)\left( IR_m + K_v\omega\right)
+    \intertext{substituting I into the expression for V:}
+    P_e&=\left(\frac{\tau}{K_t}+I_o \right)\left[ \left(\frac{\tau}{K_t}+I_o\right)R_m + K_v\omega\right]
+    \intertext{substituting in the expression for $K_t=K_v$:}
+    P_e&=\left(\frac{\tau}{\frac{60}{KV^*\cdot2\pi}}+I_o \right)\left[ \left(\frac{\tau}{\frac{60}{KV^*\cdot2\pi}}+I_o\right)R_m + \frac{60}{KV^*\cdot2\pi}\omega\right]\\
+    P_e&=\left(\frac{\tau KV^*\cdot2\pi}{60}+I_o \right)\left[ \left(\frac{\tau KV^*\cdot2\pi}{60}+I_o\right)R_m + \frac{60}{KV^*\cdot2\pi}\omega\right]
+\end{align*}
+Torque Generated by propellors on a motor is governed by their drag coefficient ($k_m$) this coefficient is sometimes included along with a propellors data sheet although it can also be determined through experimentation using a test stand which monitors the torque generated, and fits it to a line of the form:
+$$\tau = k_m\omega^2$$
+Substituting this equation into our expression for electric power consumption:
+$$
+    P_e=\left(\frac{ k_m\omega^2 KV^*\cdot2\pi}{60}+I_o \right)\left[ \left(\frac{ k_m\omega^2 KV^*\cdot2\pi}{60}+I_o\right)R_m + \frac{60}{KV^*\cdot2\pi}\omega\right]$$
+$$
+    P_e= \left(\frac{ k_m\omega^2 KV^*\cdot2\pi}{60}+I_o\right)^2R_m + \frac{60\;\omega}{KV^*\cdot2\pi}\left(\frac{ k_m\omega^2 KV^*\cdot2\pi}{60}+I_o \right)$$
+$$\boxed{
+    P_e= R_m\left(\frac{ k_m\omega^2 KV^*\cdot2\pi}{60}+I_o\right)^2 + k_m\omega^3+\frac{60I_o\omega}{2\pi(KV^*)}}$$
+
+This makes $P_e= f(\omega)$ and constants. By designing for a $\omega_{req}$, we can determine the power draw from the motors and, therefore, flight times. The thrust required for hover is:
+\begin{align*}
+T_{\text{total}} &= mg \\
+\intertext{With four motors each producing $f_{\text{thrust}}$:}
+4f_{\text{thrust}} &= mg \\
+\intertext{Using the aerodynamic thrust relationship $f_{\text{thrust}} = k_f \omega^2$:}
+4 k_f \omega_{\text{hover}}^2 &= mg
+\intertext{Solving for $\omega_{hover}$}
+\omega_{hover} &= \sqrt{\frac{mg}{4k_f}}\;\;\;(rad/s)
+\end{align*}
+Plugging this into our expression for $P_e$ gives us a realistic estimate of the power draw due to the motors: 
+$$\boxed{
+    P_e= R_m\left(\frac{ k_mmg KV^*2\pi}{604k_f}+I_o\right)^2 + k_m\sqrt{\frac{mg}{4k_f}}^3+\frac{60I_o\sqrt{\frac{mg}{4k_f}}}{2\pi(KV^*)}}$$
+\subsubsection{Flight Time}
+To finish this section regarding motor power, we will define a model for determining the runtime of the system as a function of it's mass (or g's of acceleration by scaling based on mass such that 1g = nominal mass, 2g = 2*(nominal mass)). Batteries have three constants of interest for these calculations: Capacity (Ah), Nominal Voltage (V), Efficiency. Using these constants and the electrical power draw from the motors determined in the previous section we get to this equation:
+$$\text{Usable Runtime (hours)} = \frac{\text{Capacity(Ah)}\times\text{ Nominal Voltage(V)}}{\text{Power Draw (Watts)}} \times \text{Efficiency Factor}$$
+\subsection{Translational Dynamics}
+The equations of motion are defined in the 'inertial' global reference frame. Using Newtons 2nd Law, acceleration of the quadrotor in this frame is equal to the sum of forces multiplied by the mass of the quadrotor. The sum of forces is comprised of the force of gravity ($F_g$), thrust of the motors translated from the body frame to the global inertial frame ($F_T^G$), and and the drag force ($F_d$). 
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[scale=1.2, >=Stealth, font=\sffamily]
+
+  % Define key coordinates (3D projection)
+  \coordinate (O) at (0, 0);          % Center origin
+  \coordinate (M1) at (3.2, 1.1);     % Motor 1 (Front/Right)
+  \coordinate (M2) at (0.9, -1.3);    % Motor 2 (Rear/Right)
+  \coordinate (M3) at (-3.2, -1.1);   % Motor 3 (Rear/Left)
+  \coordinate (M4) at (-0.9, 1.3);    % Motor 4 (Front/Left)
+  
+
+  % Draw Body Frame Axes
+  % x^b axis (dashed extend past motor 1)
+  \draw[thick] (M3) -- (M2);
+  \draw[thick] (M1) -- (M4);
+  \draw[ultra thick] (M1) ++(-4.5, -2.5) ellipse (0.6cm and 0.6cm);
+  \draw[ultra thick] (M1) ++(-2.1, 0.1) ellipse (0.5cm and 0.5cm);
+  \fill[white] (M1) ++(-4.5, -2.5) ellipse (0.6cm and 0.6cm);
+  \fill[white] (M1) ++(-2.1, 0.1) ellipse (0.5cm and 0.5cm);
+\draw [thick](-1.8,-1.1) --(0.8,1.6);
+\draw [thick](-0.75,-1.6) --(1.6,1);
+  % z^b axis (pointing downwards)
+  \draw[dashed, ->] (O) -- (0, -3) node[below] {$z^b$};
+  \draw[dashed, ->] (O) -- (2, 2) node[below] {$x^b$};
+  \draw[dashed, ->] (O) -- (-1.8, 0.1) node[below] {$y^b$};
+
+  % Motor Hubs (Filled Rounded Rectangles/Nodes)
+  \foreach \m in {M1, M2, M3, M4} {
+    \node[draw, fill=black, circle, inner sep=3pt] at (\m) {};
+  }
+
+  % --- MOTOR 1 (Counter-Clockwise Rotation) ---
+  \draw[dashed] (M1) -- ++(0, 1.3);
+  \draw[thick, ->,red!70!black] (M1) ++(0, 1.3) -- ++(0, 0.6) node[above] {$F_1$};
+  % Rotor Disk
+  \draw[thick, gray!80!black] (M1) ++(0, 1.1) ellipse (1.1cm and 0.35cm);
+  % Rotation arrow inside
+  \draw[thick, ->] (M1) ++(-0.8, 1.15) arc (160:20:0.8cm and 0.25cm) node [below,pos=0.9] {\tiny $\omega_1$};
+  % Torque arrow outside
+  \draw[dashed, ->,blue] (M1) ++(1.1, 1.3) arc (20:160:1.2cm and 0.4cm) node[pos = 0.9, above right=2pt] {$\tau_1$};
+
+  % --- MOTOR 2 (Clockwise Rotation) ---
+  \draw[dashed] (M2) -- ++(0, 1.3);
+  \draw[thick, ->,red!70!black] (M2) ++(0, 1.3) -- ++(0, 0.6) node[above] {$F_2$};
+  % Rotor Disk
+  \draw[thick, gray!80!black] (M2) ++(0, 1.3) ellipse (1.1cm and 0.35cm);
+  % Rotation arrow inside
+  \draw[thick, ->] (M2) ++(0.8, 1.25) arc (-20:-160:0.8cm and 0.25cm) node [pos=0.9, above] {\tiny $\omega_1$};
+  % Torque arrow outside
+  \draw[dashed, ->,blue] (M2) ++(-1.1, 1.1) arc (200:340:1.2cm and 0.4cm) node[pos = 0.9, below right=2pt] {$\tau_2$};
+
+  % --- MOTOR 3 (Counter-Clockwise Rotation) ---
+  \draw[dashed] (M3) -- ++(0, 1.3);
+  \draw[thick, ->,red!70!black] (M3) ++(0, 1.3) -- ++(0, 0.6) node[above] {$F_3$};
+  % Rotor Disk
+  \draw[thick, gray!80!black] (M3) ++(0, 1) ellipse (1.1cm and 0.35cm);
+  % Rotation arrow inside
+  \draw[thick, ->] (M3) ++(-0.8, 1.1) arc (160:20:0.8cm and 0.25cm) node [pos=1, below] {\tiny$\omega_3$};
+  % Torque arrow outside
+  \draw[dashed, ->, blue] (M3) ++(1.1, 1.2) arc (20:160:1.2cm and 0.4cm) node[pos=0.8, above right=2pt] {$\tau_3$};
+
+  % --- MOTOR 4 (Clockwise Rotation) ---
+  \draw[dashed] (M4) -- ++(0, 1.3);
+  \draw[thick, ->,red!70!black] (M4) ++(0, 1.3) -- ++(0, 0.6) node[above] {$F_4$};
+  % Rotor Disk
+  \draw[thick, gray!80!black] (M4) ++(0, 1.3) ellipse (1.1cm and 0.35cm);
+  % Rotation arrow inside
+  \draw[thick, ->] (M4) ++(0.8, 1.25) arc (-20:-160:0.8cm and 0.25cm) node [above,pos = 0.9] {\tiny$\omega_4$};
+  % Torque arrow outside
+  \draw[dashed, ->,blue] (M4) ++(-1.1, 1.1) arc (200:340:1.2cm and 0.4cm) node[pos=0.8, below right=2pt] {$\tau_4$};
+\end{tikzpicture}
+    \caption{Caption}
+    \label{fig:TikzRotors}
+\end{figure}
+
+\textbf{Newtons Second:}
+$$\sum F = ma$$
+$$F_g+F_T^G+F_d = m\ddot{X}^G$$
+Where $\ddot{X}^G$ is the second derivative of the X,Y,Z position vector in the global frame. $F_g$ only acts along the Global Z-axis:
+$$F_g = \begin{bmatrix}
+0\\0\\mg
+\end{bmatrix}$$
+Here, we will use a simplified model of drag which treats drag as proportionally linear to velocity in each of the global frames. This model uses three coefficients for drag: $K_{d,x},\;K_{d,y},\; \text{and}\;K_{d,z}$. A more complex analysis would model the drag force in the body frame, and might be added to this analysis later. Using these constants to relate velocity in the global frame to drag force in the global frame: 
+$$F_d = \begin{bmatrix}
+    K_{d,x}&0&0\\0&K_{d,y}&0\\0&0&K_{d,z}
+\end{bmatrix}
+\begin{bmatrix}
+    \dot{X}^G\\\dot{Y}^G\\\dot{Z}^G
+\end{bmatrix}$$
+In the Body frame, the thrust vector acts only in the $-z_b$ direction,additionally, as discussed previously, for each (i) motor, the magnitude of the thrust generated is modeled as $F_i = K_T\cdot\omega_i^2$ where $K_T$ is the coefficient of thrust (constant for each motor). This gives us:
+$$F_T^b = \sum^4_{i=1} Fi = \begin{bmatrix}
+    0\\0\\K_T\sum^4_{i=1}\omega_i^2
+\end{bmatrix}$$
+Using equation (\ref{eq:R_b^G}) for $R_b^G$ we can rotate these forces in the body frame into forces in the global frame:
+$$F_T^G = R_b^G\cdot F_T^b =R_b^G\begin{bmatrix}
+    0\\0\\K_T\sum^4_{i=1}\omega_i^2
+\end{bmatrix} $$
+$$F_T^G = \begin{array}{l}
+\left[\begin{array}{c}
+-K_T \,{\left[\sin \left(\phi \right)\,\sin \left(\psi \right)+\cos \left(\phi \right)\,\cos \left(\psi \right)\,\sin \left(\theta \right)\right]}\,({\omega_1 }^2 +{\omega_2 }^2 +{\omega_3 }^2 +{\omega_4 }^2) \\
+K_T \,{\left[\cos \left(\psi \right)\,\sin \left(\phi \right)-\cos \left(\phi \right)\,\sin \left(\psi \right)\,\sin \left(\theta \right)\right]}\,({\omega_1 }^2 +{\omega_2 }^2 +{\omega_3 }^2 +{\omega_4 }^2) \\
+-K_T \,\cos \left(\phi \right)\,\cos \left(\theta \right)\,({\omega_1 }^2 +{\omega_2 }^2 +{\omega_3 }^2 +{\omega_4 }^2) 
+\end{array}\right]\\
+\mathrm{}\\
+\end{array}$$
+\textbf{Summing the Gravity, Drag, and Thrust forces and dividing mass to determine acceleration in the body frame:}
+$$\begin{bmatrix}
+    \ddot{X}^G\\\ddot{Y}^G\\\ddot{Z}^G
+\end{bmatrix} = \begin{array}{l}
+\left[\begin{array}{c}\frac{1}{m}\left[
+K_{d,x} \,\dot{X}^G-K_T \,{\left(\sin \left(\phi \right)\,\sin \left(\psi \right)+\cos \left(\phi \right)\,\cos \left(\psi \right)\,\sin \left(\theta \right)\right)}\,\cdot\left({\omega_1 }^2 +{\omega_2 }^2 +{\omega_3 }^2 +{\omega_4 }^2\right)  \right]\\
+\frac{1}{m}\left[K_{d,y} \,\dot{Y}^G+K_T \,{\left(\cos \left(\psi \right)\,\sin \left(\phi \right)-\cos \left(\phi \right)\,\sin \left(\psi \right)\,\sin \left(\theta \right)\right)}\,\cdot\left({\omega_1 }^2 +{\omega_2 }^2 +{\omega_3 }^2 +{\omega_4 }^2\right) \right]\\
+\frac{1}{m}\left[K_{d,z} \,\dot{Z}^G+g\,m-K_T \,\cos \left(\phi \right)\,\cos \left(\theta \right)\,\cdot\left({\omega_1 }^2 +{\omega_2 }^2 +{\omega_3 }^2 +{\omega_4 }^2\right) \right]
+\end{array}\right]
+\end{array}$$
+
+
+$$\begin{bmatrix}
+    \ddot{X}^G\\\ddot{Y}^G\\\ddot{Z}^G
+\end{bmatrix} = \frac{1}{m}
+\begin{bmatrix}
+K_{d,x} \,\dot{X}^G & - \,{\left(\sin \left(\phi \right)\,\sin \left(\psi \right)+\cos \left(\phi \right)\,\cos \left(\psi \right)\,\sin \left(\theta \right)\right)}\\
+K_{d,y} \,\dot{Y}^G& \,{\left(\cos \left(\psi \right)\,\sin \left(\phi \right)-\cos \left(\phi \right)\,\sin \left(\psi \right)\,\sin \left(\theta \right)\right)}\\\
+K_{d,z} \,\dot{Z}^G+g\,m&- \,\cos \left(\phi \right)\,\cos \left(\theta \right)
+\end{bmatrix}\begin{bmatrix}
+    1\\K_T\left({\omega_1 }^2 +{\omega_2 }^2 +{\omega_3 }^2 +{\omega_4 }^2\right) 
+\end{bmatrix}$$
+\subsection{Rotational Dynamics}
+Using Newtons second for rotational motion:
+$$\sum\tau = I\alpha =I\dot{\omega} $$
+For this analysis, there are three relevant torques to consider:
+\begin{itemize}
+    \item $\tau_m$, this is the torque generated by different amounts of thrust applied by each motor. These are the control inputs over the attitude of the vehicle. 
+    \item $\tau_g$, is the gyroscopic torque created by spinning the propellers and motors at high speeds. 
+    \item Gyroscopic Cross Coupling term, this term ($\omega\times I_b\omega$) quantifies the torque created by a net torque around a body on an axis other than the one it is currently spinning about. The resulting torque is perpendicular to both the original net torque axis aswell as the axis of rotation. 
+\end{itemize}
+Putting these terms together we get:
+$$I_b\dot{\omega} = \tau_m+\tau_g-(\omega\times I_b\omega)$$
+
+Given that the mass is assumed to be distributed symmetrically about the principal axis, and, the products of inertia are also assumed to be zero, the Inertia tensor in the body frame is defined as follows:
+$$I_b = \begin{bmatrix}
+    I_x&0&0\\0&I_y&0\\0&0&I_z
+\end{bmatrix}$$
+Expanding the Cross Coupling term discussed earlier:
+\begin{align*}\omega\times I_b\omega &= \begin{bmatrix}
+    \dot{\phi}\\\dot{\theta}\\\dot{\psi}
+\end{bmatrix} \times \begin{bmatrix}
+    I_x&0&0\\0&I_y&0\\0&0&I_z
+\end{bmatrix}\begin{bmatrix}
+    \dot{\phi}\\\dot{\theta}\\\dot{\psi}
+\end{bmatrix}\\
+    &=\begin{bmatrix}
+    \dot{\phi}\\\dot{\theta}\\\dot{\psi}
+\end{bmatrix} \times \begin{bmatrix}
+    I_x\dot{\phi}+0+0\\0+I_y\dot{\theta}+0\\0+0+I_z\dot{\psi}\end{bmatrix}=\begin{bmatrix}
+    \dot{\phi}\\\dot{\theta}\\\dot{\psi}
+\end{bmatrix} \times \begin{bmatrix}
+    I_x\dot{\phi}\\I_y\dot{\theta}\\I_z\dot{\psi}\end{bmatrix}\\
+    &=\begin{bmatrix}
+I_z \dot{\psi} \,\dot{\theta} -I_y \,\dot{\psi} \,\dot{\theta} \\
+I_x \,\dot{\phi} \,\dot{\psi} -I_z \,\dot{\phi} \,\dot{\psi} \\
+I_y \,\dot{\phi} \,\dot{\theta} -I_x \,\dot{\phi} \,\dot{\theta }
+\end{bmatrix}\\
+    &=\begin{bmatrix}
+\dot{\psi} \,\dot{\theta}(I_z  -I_y) \\
+\,\dot{\phi} \,\dot{\psi}(I_x -I_z ) \\
+\dot{\phi} \,\dot{\theta}(I_y -I_x )
+\end{bmatrix}
+\end{align*}
+\subsubsection{Propeller and Motor Torques}
+The torque about the motors can be defined as:
+$$I_m \dot{\omega} = \tau_m - \tau_{\psi}$$
+Where $\tau_\psi$ is the torque about the z axis as a result of propeller drag about the z axis of the quadrotor (the z axis of each propeller is assumed parallel to the z axis of the body frame). At hover there will be no net torque about the motors and:
+$$\tau_m = \tau_{\psi}$$
+As discussed earlier, the drag created by each propeller is modeled by the following equation:
+$$\tau_{D,i} = K_D\omega^2$$
+$K_D$ here comes from the standard formulation of aerodynamic drag, multiplied by $R^2$ to be converted from a force to a torque. 
+$$K_d = \frac{1}{2} \rho C_D A R^3$$
+Summing the drag torque for each propeller:
+$$\tau_\psi = \tau_{D} =\sum\tau_{D,i} = K_D(\omega_1^2+\omega_2^2+\omega_3^2+\omega_4^2)$$
+Here, we can see that we'll have an issue where the rotation of each motor sums to a positive torque about the $z_b$ axis. This would make achieving equilibrium in flight impossible. To account for this two of the motors will be spun in the opposite direction, creating a drag torque in the opposite direction (as shown in Figure \ref{fig:TikzRotors}):
+ $$\tau_\psi = \tau_{D} =\sum\tau_{D,i} = K_D(\omega_1^2-\omega_2^2+\omega_3^2-\omega_4^2)$$
+ The torque about the x and y axis are governed by the thrust of each motor and the geometry of the quadrotor as shown in Figure \ref{fig:Geometries}:
+ \begin{figure}[H]
+     \centering
+     \begin{tikzpicture}[scale = 1.3]
+        \draw[ultra thick] (0,1) arc (90:270:0.1cm and 1cm);
+  
+         \draw[ultra thick] (0,-1) -- (6,-1);
+         \draw[ultra thick] (0,1) -- (6,1);
+    
+         \draw[ultra thick] (6,0) ellipse (0.1cm and 1cm);
+
+         \fill[thick] (3,0) circle (0.05cm) node [below] {m};
+
+         % Arms
+         \draw[ultra thick] (0.4,1) -- (0.4,2.5);
+         \draw[ultra thick] (5.5,1) -- (5.5,2.5);
+         \draw[ultra thick] (0.4,-1) -- (0.4,-2.5);
+         \draw[ultra thick] (5.5,-1) -- (5.5,-2.5);
+
+         
+
+
+
+         \draw [thick,dashed, gray][-|] (3,0) -- (5.5,0);
+         \node at (5, 0) [above] {\tiny$L_{F,x}$};
+
+ 
+
+         \draw [thick, dashed, gray] (3,0) -- (5.5,2.5);
+         
+         \draw [thick, dashed, gray][|-|] (5.7,0) -- (5.7,2.5);
+            \node at (5.9, 1.8) [right, rotate = 90] {\tiny$L_{F,y}$};
+         \draw[thick, green!60!black] (4,0) arc (0:45:1cm);
+
+        
+        \node at (3.7, 0.4) [green!60!black]{\small$\gamma$};
+         % Body Frame Axis
+         \draw [blue!50][-Stealth] (3,0) -- (3.5 ,0) node [right]{\tiny $x_b$};
+         \draw [blue!50][-Stealth] (3,0) -- (3 ,0.5) node [right]{\tiny $y_b$};
+
+         \fill[thick, red!50!black] (0.4,2.5) circle (0.2cm);
+         \fill[thick, red!50!black] (5.5,2.5) circle (0.2cm);
+         \fill[thick, red!50!black] (0.4,-2.5) circle (0.2cm);
+         \fill[thick, red!50!black] (5.5,-2.5) circle (0.2cm);
+         \fill[thick, white] (0.4,2.5) circle (0.02cm);
+         \fill[thick, white] (5.5,2.5) circle (0.02cm);
+         \fill[thick, white] (0.4,-2.5) circle (0.02cm);
+         \fill[thick, white] (5.5,-2.5) circle (0.02cm);
+    \end{tikzpicture}
+     \caption{Geometries of H-Frame Quadrotor}
+     \label{fig:Geometries}
+ \end{figure}
+
+The torque about these axis can be calculated as following: 
+$$\tau_\theta =  L_{F,x}K_T\,\left(\omega_4^2+\omega^2_3-\omega^2_2-\omega^2_1\right)$$
+$$\tau_\phi  = L_{F,y}K_T\,\left(\omega_3^2+\omega^2_2-\omega^2_4-\omega^2_1\right)$$
+Therefore the motor torque ($\tau_m$) can be expressed as follows:
+$$\boxed{\tau_m = \begin{bmatrix}
+    L_{F,y}K_T\,\left(\omega_3^2+\omega^2_2-\omega^2_4-\omega^2_1\right)\\
+    L_{F,x}K_T\,\left(\omega_4^2+\omega^2_3-\omega^2_2-\omega^2_1\right)\\
+    K_D(\omega_1^2-\omega_2^2+\omega_3^2-\omega_4^2)
+\end{bmatrix}}$$
+\subsection{Gyroscopic Torque}
+Precession Theory shows us that:
+$$\mathbf{\tau_g} = \mathbf{\omega} \times \mathbf{G_Z} \sum_{i=1}^{4} I_r \omega_i$$
+Expanding this equation:
+$$\mathbf{\tau_g} = \begin{bmatrix}
+    \dot{\phi}\\\dot{\theta}\\\dot{\psi}
+\end{bmatrix}\times \begin{bmatrix}
+    0\\0\\1
+\end{bmatrix} I_r (\omega_1-\omega_2+\omega_3-\omega_4)$$
+$$\mathbf{\tau_g} == \begin{bmatrix}
+    \dot{\phi}\\\dot{\theta}\\\dot{\psi}
+\end{bmatrix}\times\left[\begin{array}{c}
+0\\
+0\\
+I_r \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}
+\end{array}\right]$$
+$$\boxed{\mathbf{\tau_g}=\left[\begin{array}{c}
+I_r \,\theta \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}\\
+-I_r \,\phi \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}\\
+0
+\end{array}\right]}$$
+Substituting terms back into the original equation:
+$$I_b\dot{\omega} = \tau_m+\tau_g-(\omega\times I_b\omega)$$
+$$I_b\dot{\omega} = \begin{bmatrix}
+    L_{F,y}K_T\,\left(\omega_3^2+\omega^2_2-\omega^2_4-\omega^2_1\right)\\
+    L_{F,x}K_T\,\left(\omega_4^2+\omega^2_3-\omega^2_2-\omega^2_1\right)\\
+    K_D(\omega_1^2-\omega_2^2+\omega_3^2-\omega_4^2)
+\end{bmatrix}+\left[\begin{array}{c}
+I_r \,\theta \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}\\
+-I_r \,\phi \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}\\
+0
+\end{array}\right]-\begin{bmatrix}
+\dot{\psi} \,\dot{\theta}(I_z  -I_y) \\
+\,\dot{\phi} \,\dot{\psi}(I_x -I_z ) \\
+\dot{\phi} \,\dot{\theta}(I_y -I_x )
+\end{bmatrix}$$
+$$I_b\dot{\omega} = \begin{bmatrix}
+    L_{F,y}K_T\,\left(\omega_3^2+\omega^2_2-\omega^2_4-\omega^2_1\right) + I_r \,\theta \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}+\dot{\psi} \,\dot{\theta}(I_z  -I_y)\\
+    L_{F,x}K_T\,\left(\omega_4^2+\omega^2_3-\omega^2_2-\omega^2_1\right)-I_r \,\phi \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}+\dot{\phi} \,\dot{\psi}(I_x -I_z )\\
+    K_D(\omega_1^2-\omega_2^2+\omega_3^2-\omega_4^2)+\dot{\phi} \,\dot{\theta}(I_y -I_x )
+\end{bmatrix}$$
+Dividing by Inertia term and solving for angular acceleration:
+$$\dot{\omega} = \begin{bmatrix}
+    \frac{1}{I_x}\left[L_{F,y}K_T\,\left(\omega_3^2+\omega^2_2-\omega^2_4-\omega^2_1\right) + I_r \,\theta \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}+\dot{\psi} \,\dot{\theta}(I_z  -I_y)\right]\\
+    \frac{1}{I_y}\left[L_{F,x}K_T\,\left(\omega_4^2+\omega^2_3-\omega^2_2-\omega^2_1\right)-I_r \,\phi \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}+\dot{\phi} \,\dot{\psi}(I_x -I_z )\right]\\
+    \frac{1}{I_z}\left[K_D(\omega_1^2-\omega_2^2+\omega_3^2-\omega_4^2)+\dot{\phi} \,\dot{\theta}(I_y -I_x )\right]
+\end{bmatrix}$$
+$$\begin{bmatrix}
+    \ddot{\phi}\\\ddot{\theta}\\\ddot{\psi}
+\end{bmatrix}= \begin{bmatrix}
+    \frac{1}{I_x}\left[L_{F,y}K_T\,\left(\omega_3^2+\omega^2_2-\omega^2_4-\omega^2_1\right) + I_r \,\theta \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}+r \,q(I_z  -I_y)\right]\\
+    \frac{1}{I_y}\left[L_{F,x}K_T\,\left(\omega_4^2+\omega^2_3-\omega^2_2-\omega^2_1\right)-I_r \,\phi \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}+p \,r(I_x -I_z )\right]\\
+    \frac{1}{I_z}\left[K_D(\omega_1^2-\omega_2^2+\omega_3^2-\omega_4^2)+p \,q(I_y -I_x )\right]
+\end{bmatrix}$$
+\section{Full Equations of motions}
+Our states are
+\begin{itemize}
+    \item X
+    \item Y
+    \item Z
+    \item $\dot{X}$
+    \item $\dot{Y}$
+    \item $\dot{Z}$
+    \item $\phi$
+    \item $\theta$
+    \item $\psi$
+    \item $\dot{\phi}$
+    \item $\dot{\theta}$
+    \item $\dot{\psi}$
+\end{itemize}
+
+The derivatives of these states have been defined in the previous sections, and, are summarized here as the full equations of motion:
+\begin{align*}
+\begin{bmatrix}
+    \dot{X}^G\\\dot{Y}^G\\\dot{Z}^G
+\end{bmatrix} &= \begin{bmatrix}  \cos\psi\cos\theta & \cos\psi\sin\theta\sin\phi - \sin\psi\cos\phi & \cos\psi\sin\theta\cos\phi + \sin\psi\sin\phi \\ \sin\psi\cos\theta & \sin\psi\sin\theta\sin\phi + \cos\psi\cos\phi & \sin\psi\sin\theta\cos\phi - \cos\psi\sin\phi \\ -\sin\theta & \cos\theta\sin\phi & \cos\theta\cos\phi  
+\end{bmatrix}\begin{bmatrix}
+    \dot{x_b}\\\dot{y_b}\\\dot{z_b}
+\end{bmatrix}\\
+\begin{bmatrix}
+    \ddot{X}^G\\\ddot{Y}^G\\\ddot{Z}^G
+\end{bmatrix} &= \begin{array}{l}
+\left[\begin{array}{c}\frac{1}{m}\left[
+K_{d,x} \,\dot{X}^G-K_T \,{\left(\sin \left(\phi \right)\,\sin \left(\psi \right)+\cos \left(\phi \right)\,\cos \left(\psi \right)\,\sin \left(\theta \right)\right)}\,\cdot\left({\omega_1 }^2 +{\omega_2 }^2 +{\omega_3 }^2 +{\omega_4 }^2\right)  \right]\\
+\frac{1}{m}\left[K_{d,y} \,\dot{Y}^G+K_T \,{\left(\cos \left(\psi \right)\,\sin \left(\phi \right)-\cos \left(\phi \right)\,\sin \left(\psi \right)\,\sin \left(\theta \right)\right)}\,\cdot\left({\omega_1 }^2 +{\omega_2 }^2 +{\omega_3 }^2 +{\omega_4 }^2\right) \right]\\
+\frac{1}{m}\left[K_{d,z} \,\dot{Z}^G+g\,m-K_T \,\cos \left(\phi \right)\,\cos \left(\theta \right)\,\cdot\left({\omega_1 }^2 +{\omega_2 }^2 +{\omega_3 }^2 +{\omega_4 }^2\right) \right]
+\end{array}\right]
+\end{array}\\
+\begin{bmatrix} \dot{\phi} \\ \dot{\theta} \\ \dot{\psi} \end{bmatrix} &= \begin{bmatrix} 1 & \sin\phi\tan\theta & \cos\phi\tan\theta \\ 0 & \cos\phi & -\sin\phi \\ 0 & \frac{\sin\phi}{\cos\theta} & \frac{\cos\phi}{\cos\theta} \end{bmatrix}\begin{bmatrix} p \\ q \\ r \end{bmatrix}\\
+\begin{bmatrix}
+    \ddot{\phi}\\\ddot{\theta}\\\ddot{\psi}
+\end{bmatrix} &= \begin{bmatrix}
+    \frac{1}{I_x}\left[L_{F,y}K_T\left(\omega_3^2+\omega^2_2-\omega^2_4-\omega^2_1\right) + I_rq{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}+rq(I_z  -I_y)\right]\\
+    \frac{1}{I_y}\left[L_{F,x}K_T\left(\omega_4^2+\omega^2_3-\omega^2_2-\omega^2_1\right)-I_rp \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}+pr(I_x -I_z )\right]\\
+    \frac{1}{I_z}\left[K_D(\omega_1^2-\omega_2^2+\omega_3^2-\omega_4^2)+pq(I_y -I_x )\right]
+\end{bmatrix}
+\end{align*}
+\section{drawings}
+\subsection{Top View}
+\begin{center}
+    \begin{tikzpicture}[scale = 1.3]
+        \draw[ultra thick] (0,1) arc (90:270:0.1cm and 1cm);
+  
+         \draw[ultra thick] (0,-1) -- (6,-1);
+         \draw[ultra thick] (0,1) -- (6,1);
+    
+         \draw[ultra thick] (6,0) ellipse (0.1cm and 1cm);
+
+         \fill[thick] (3,0) circle (0.05cm) node [below] {m};
+
+         % Arms
+         \draw[ultra thick] (0.4,1) -- (0.4,2.5);
+         \draw[ultra thick] (5.5,1) -- (5.5,2.5);
+         \draw[ultra thick] (0.4,-1) -- (0.4,-2.5);
+         \draw[ultra thick] (5.5,-1) -- (5.5,-2.5);
+
+         
+
+         % Dimensions
+         \draw [thick, dashed, gray] (0.4,-1.6) -- (5.5,-1.6);
+         \node at (4, -1.6) [below] {\tiny$L_{F,x} = 2L_{ax}$};
+
+         \draw [thick,dashed, gray][-|] (3,0) -- (5.5,0);
+         \node at (5, 0) [above] {\tiny$L_{a,x}$};
+
+         \draw [thick,dashed, gray][|-|] (-0.5,-2.5) -- (-0.5,2.5);
+         \node at (-0.6, 0) [left, rotate = 90] {\tiny$L_{F,y}=2L_{a,y}$};
+
+         \draw [thick, dashed, gray] (3,0) -- (5.5,2.5);
+         
+         \draw [thick, dashed, gray][|-|] (5.7,0) -- (5.7,2.5);
+            \node at (5.9, 1.8) [right, rotate = 90] {\tiny$L_{a,y}$};
+         \draw[thick, green!60!black] (4,0) arc (0:45:1cm);
+
+        
+        \node at (3.7, 0.4) [green!60!black]{\small$\gamma$};
+         % Body Frame Axis
+         \draw [blue!50][-Stealth] (3,0) -- (3.5 ,0) node [right]{\tiny $x_b$};
+         \draw [blue!50][-Stealth] (3,0) -- (3 ,0.5) node [right]{\tiny $y_b$};
+
+         \fill[thick, red!50!black] (0.4,2.5) circle (0.2cm);
+         \fill[thick, red!50!black] (5.5,2.5) circle (0.2cm);
+         \fill[thick, red!50!black] (0.4,-2.5) circle (0.2cm);
+         \fill[thick, red!50!black] (5.5,-2.5) circle (0.2cm);
+         \fill[thick, white] (0.4,2.5) circle (0.02cm);
+         \fill[thick, white] (5.5,2.5) circle (0.02cm);
+         \fill[thick, white] (0.4,-2.5) circle (0.02cm);
+         \fill[thick, white] (5.5,-2.5) circle (0.02cm);
+    \end{tikzpicture}
+\end{center}
+\section{Drawings}
+\begin{center}
+\begin{tikzpicture}[scale=1.2, >=Stealth, font=\sffamily]
+
+  % Define key coordinates (3D projection)
+  \coordinate (O) at (0, 0);          % Center origin
+  \coordinate (M1) at (3.2, 1.1);     % Motor 1 (Front/Right)
+  \coordinate (M2) at (0.9, -1.3);    % Motor 2 (Rear/Right)
+  \coordinate (M3) at (-3.2, -1.1);   % Motor 3 (Rear/Left)
+  \coordinate (M4) at (-0.9, 1.3);    % Motor 4 (Front/Left)
+  
+
+  % Draw Body Frame Axes
+  % x^b axis (dashed extend past motor 1)
+  \draw[thick] (M3) -- (M2);
+  \draw[thick] (M1) -- (M4);
+  \draw[ultra thick] (M1) ++(-4.5, -2.5) ellipse (0.6cm and 0.6cm);
+  \draw[ultra thick] (M1) ++(-2.1, 0.1) ellipse (0.5cm and 0.5cm);
+  \fill[white] (M1) ++(-4.5, -2.5) ellipse (0.6cm and 0.6cm);
+  \fill[white] (M1) ++(-2.1, 0.1) ellipse (0.5cm and 0.5cm);
+\draw [thick](-1.8,-1.1) --(0.8,1.6);
+\draw [thick](-0.75,-1.6) --(1.6,1);
+  % z^b axis (pointing downwards)
+  \draw[dashed, ->] (O) -- (0, -3) node[below] {$z^b$};
+  \draw[dashed, ->] (O) -- (2, 2) node[below] {$x^b$};
+  \draw[dashed, ->] (O) -- (-1.8, 0.1) node[below] {$y^b$};
+
+  % Motor Hubs (Filled Rounded Rectangles/Nodes)
+  \foreach \m in {M1, M2, M3, M4} {
+    \node[draw, fill=black, circle, inner sep=3pt] at (\m) {};
+  }
+
+  % --- MOTOR 1 (Counter-Clockwise Rotation) ---
+  \draw[dashed] (M1) -- ++(0, 1.3);
+  \draw[thick, ->,red!70!black] (M1) ++(0, 1.3) -- ++(0, 0.6) node[above] {$F_1$};
+  % Rotor Disk
+  \draw[thick, gray!80!black] (M1) ++(0, 1.1) ellipse (1.1cm and 0.35cm);
+  % Rotation arrow inside
+  \draw[thick, ->] (M1) ++(-0.8, 1.15) arc (160:20:0.8cm and 0.25cm) node [below,pos=0.9] {\tiny $\omega_1$};
+  % Torque arrow outside
+  \draw[dashed, ->,blue] (M1) ++(1.1, 1.3) arc (20:160:1.2cm and 0.4cm) node[pos = 0.9, above right=2pt] {$\tau_1$};
+
+  % --- MOTOR 2 (Clockwise Rotation) ---
+  \draw[dashed] (M2) -- ++(0, 1.3);
+  \draw[thick, ->,red!70!black] (M2) ++(0, 1.3) -- ++(0, 0.6) node[above] {$F_2$};
+  % Rotor Disk
+  \draw[thick, gray!80!black] (M2) ++(0, 1.3) ellipse (1.1cm and 0.35cm);
+  % Rotation arrow inside
+  \draw[thick, ->] (M2) ++(0.8, 1.25) arc (-20:-160:0.8cm and 0.25cm) node [pos=0.9, above] {\tiny $\omega_1$};
+  % Torque arrow outside
+  \draw[dashed, ->,blue] (M2) ++(-1.1, 1.1) arc (200:340:1.2cm and 0.4cm) node[pos = 0.9, below right=2pt] {$\tau_2$};
+
+  % --- MOTOR 3 (Counter-Clockwise Rotation) ---
+  \draw[dashed] (M3) -- ++(0, 1.3);
+  \draw[thick, ->,red!70!black] (M3) ++(0, 1.3) -- ++(0, 0.6) node[above] {$F_3$};
+  % Rotor Disk
+  \draw[thick, gray!80!black] (M3) ++(0, 1) ellipse (1.1cm and 0.35cm);
+  % Rotation arrow inside
+  \draw[thick, ->] (M3) ++(-0.8, 1.1) arc (160:20:0.8cm and 0.25cm) node [pos=1, below] {\tiny$\omega_3$};
+  % Torque arrow outside
+  \draw[dashed, ->, blue] (M3) ++(1.1, 1.2) arc (20:160:1.2cm and 0.4cm) node[pos=0.8, above right=2pt] {$\tau_3$};
+
+  % --- MOTOR 4 (Clockwise Rotation) ---
+  \draw[dashed] (M4) -- ++(0, 1.3);
+  \draw[thick, ->,red!70!black] (M4) ++(0, 1.3) -- ++(0, 0.6) node[above] {$F_4$};
+  % Rotor Disk
+  \draw[thick, gray!80!black] (M4) ++(0, 1.3) ellipse (1.1cm and 0.35cm);
+  % Rotation arrow inside
+  \draw[thick, ->] (M4) ++(0.8, 1.25) arc (-20:-160:0.8cm and 0.25cm) node [above,pos = 0.9] {\tiny$\omega_4$};
+  % Torque arrow outside
+  \draw[dashed, ->,blue] (M4) ++(-1.1, 1.1) arc (200:340:1.2cm and 0.4cm) node[pos=0.8, below right=2pt] {$\tau_4$};
+\end{tikzpicture}
+\end{center}
+\subsection{Top View}
+
+
+\subsection{Side View}
+
+\subsection{Relavent Frames}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{fd.png}
+\end{figure}
+
+\end{document}
