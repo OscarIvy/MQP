@@ -2,113 +2,125 @@ name: Process Uploaded Artifacts
 
 on:
   issues:
-    types: [opened, edited, labeled]
+    types: [opened, edited]
 
 permissions:
   contents: write
   issues: write
 
+# One upload at a time so simultaneous pushes don't collide
+concurrency:
+  group: process-uploads
+  cancel-in-progress: false
+
 jobs:
   extract-attachments:
+    # Only [UPLOAD] issues, only while still open, only from people with write access
+    if: >-
+      github.event.issue.state == 'open' &&
+      contains(github.event.issue.title, '[UPLOAD]:') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Download, Parse Metadata & Organize Files
+      - name: Parse issue fields
+        id: parse
         env:
           ISSUE_BODY: ${{ github.event.issue.body }}
-          ISSUE_TITLE: ${{ github.event.issue.title }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Verify title prefix
-          if [[ "$ISSUE_TITLE" != *"[UPLOAD]:"* ]]; then
-            echo "Not a file submission issue. Skipping."
-            exit 0
-          fi
-
-          # 1. Parse Issue Fields using Python
-          python -c "
+          python3 - <<'PY'
           import os, re
 
-          body = os.getenv('ISSUE_BODY', '')
+          body = os.environ.get('ISSUE_BODY', '').replace('\r\n', '\n')
 
-          # Parse Summary
-          summary_match = re.search(r'### Summary / Commit Note\s*\n\n(.*?)(?=\n\n###|\Z)', body, re.DOTALL)
-          summary = summary_match.group(1).strip() if summary_match else 'File submission'
+          def field(name):
+              m = re.search(rf'### {re.escape(name)}\s*\n\n(.*?)(?=\n\n###|\Z)', body, re.DOTALL)
+              value = m.group(1).strip() if m else ''
+              return '' if value in ('_No response_', 'None') else value
 
-          # Parse Addressed Issues (#12, #15 -> fixes #12 fixes #15)
-          issues_match = re.search(r'### Addresses / Closes Issues\s*\n\n(.*?)(?=\n\n###|\Z)', body, re.DOTALL)
-          raw_issues = issues_match.group(1).strip() if issues_match else ''
-          issue_nums = re.findall(r'#(\d+)', raw_issues)
-          fixes_str = ' '.join([f'fixes #{num}' for num in issue_nums])
+          def first_line(text):
+              return text.splitlines()[0].strip() if text else ''
 
-          # Parse Custom Label
-          label_match = re.search(r'### Category Label\s*\n\n(.*?)(?=\n\n###|\Z)', body, re.DOTALL)
-          custom_label = label_match.group(1).strip() if label_match else ''
+          summary = first_line(field('Summary / Commit Note')) or 'File submission'
+          label = first_line(field('Category Label'))
+          nums = re.findall(r'#(\d+)', field('Addresses / Closes Issues'))
+          fixes = ' '.join(f'fixes #{n}' for n in nums)
 
-          # Write variables to environment
-          with open(os.environ['GITHUB_ENV'], 'a') as f:
-              f.write(f'COMMIT_SUMMARY={summary}\n')
-              f.write(f'FIXES_STR={fixes_str}\n')
-              f.write(f'CUSTOM_LABEL={custom_label}\n')
-          "
+          # Single-line values only, so nothing can inject extra outputs
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f'summary={summary}\n')
+              f.write(f'label={label}\n')
+              f.write(f'fixes={fixes}\n')
+          PY
 
-          # 2. Add parsed category label to GitHub Issue if provided
-          if [ -n "$CUSTOM_LABEL" ] && [ "$CUSTOM_LABEL" != "None" ]; then
-            gh issue edit "$ISSUE_NUMBER" --add-label "$CUSTOM_LABEL" || true
-          fi
+      - name: Apply category label
+        if: steps.parse.outputs.label != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          LABEL: ${{ steps.parse.outputs.label }}
+        run: gh issue edit "$ISSUE_NUMBER" --add-label "$LABEL" || echo "Could not apply label '$LABEL'"
 
-          # 3. Download and Organize Attachments
-          mkdir -p CAD Excel Documents
-          URLS=$(echo "$ISSUE_BODY" | grep -oE 'https://github.com/user-attachments/files/[^ ")]+' || true)
-
+      - name: Download attachments and commit
+        id: commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          SUMMARY: ${{ steps.parse.outputs.summary }}
+          FIXES: ${{ steps.parse.outputs.fixes }}
+        run: |
+          URLS=$(echo "$ISSUE_BODY" | tr -d '\r' | grep -oE 'https://github.com/user-attachments/files/[^ ")]+' || true)
           if [ -z "$URLS" ]; then
             echo "No attachments found."
             exit 0
           fi
 
+          mkdir -p CAD Excel Documents
           for url in $URLS; do
             filename=$(basename "$url")
             echo "Downloading $filename..."
-            curl -sL "$url" -o "tmp_$filename"
-
-            case "$filename" in
-              *.step|*.stp|*.stl|*.f3d|*.sldprt)
-                mv "tmp_$filename" "CAD/$filename"
-                ;;
-              *.xlsx|*.xls|*.csv)
-                mv "tmp_$filename" "Excel/$filename"
-                ;;
-              *)
-                mv "tmp_$filename" "Documents/$filename"
-                ;;
+            # -f: fail on HTTP errors instead of saving an error page as the file
+            curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "$url" -o "tmp_$filename"
+            case "${filename,,}" in
+              *.step|*.stp|*.stl|*.f3d|*.sldprt) mv "tmp_$filename" "CAD/$filename" ;;
+              *.xlsx|*.xls|*.csv)                mv "tmp_$filename" "Excel/$filename" ;;
+              *)                                 mv "tmp_$filename" "Documents/$filename" ;;
             esac
           done
 
-          # 4. Construct Git Commit Message
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CAD Excel Documents
 
-          if [[ $(git status --porcelain) ]]; then
-            # Format: <Summary> (<fixes #X>) [skip ci]
-            COMMIT_TITLE="$COMMIT_SUMMARY"
-            if [ -n "$FIXES_STR" ]; then
-              COMMIT_TITLE="$COMMIT_TITLE ($FIXES_STR)"
-            fi
-            COMMIT_TITLE="$COMMIT_TITLE [skip ci]"
-
-            git add CAD/ Excel/ Documents/
-            git commit -m "$COMMIT_TITLE" -m "Uploaded via Issue #${ISSUE_NUMBER}"
-            git push
-          else
+          if git diff --cached --quiet; then
             echo "No changes to commit."
+            exit 0
           fi
 
-      - name: Comment and Close Issue
+          # Format: <Summary> (<fixes #X fixes #Y>) [skip ci]
+          TITLE="$SUMMARY"
+          if [ -n "$FIXES" ]; then
+            TITLE="$TITLE ($FIXES)"
+          fi
+          git commit -m "$TITLE [skip ci]" -m "Uploaded via Issue #${ISSUE_NUMBER}"
+          git push
+          echo "committed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Comment and close issue
+        if: steps.commit.outputs.committed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
-          gh issue comment ${{ github.event.issue.number }} --body "Files extracted, labeled, and committed to repository automatically!"
-          gh issue close ${{ github.event.issue.number }}
+          gh issue comment "$ISSUE_NUMBER" --body "Files extracted and committed to the repository automatically."
+          gh issue close "$ISSUE_NUMBER"
+
+      - name: Comment when nothing was committed
+        if: steps.commit.outputs.committed != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: gh issue comment "$ISSUE_NUMBER" --body "No new attachments found. Edit this issue to attach the file and I'll try again."
