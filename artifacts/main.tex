@@ -140,9 +140,11 @@ $$
 $$
 Using The Standard Z-Y-X Euler Sequence to get $R_b^G$:
 $$R_b^G = R_z(\psi) R_y(\theta) R_x(\phi) = \begin{bmatrix} \cos\psi & -\sin\psi & 0 \\ \sin\psi & \cos\psi & 0 \\ 0 & 0 & 1 \end{bmatrix} \begin{bmatrix} \cos\theta & 0 & \sin\theta \\ 0 & 1 & 0 \\ -\sin\theta & 0 & \cos\theta \end{bmatrix} \begin{bmatrix} 1 & 0 & 0 \\ 0 & \cos\phi & -\sin\phi \\ 0 & \sin\phi & \cos\phi \end{bmatrix}$$
-\begin{equation} R_b^G = \begin{bmatrix}  \cos\psi\cos\theta & \cos\psi\sin\theta\sin\phi - \sin\psi\cos\phi & \cos\psi\sin\theta\cos\phi + \sin\psi\sin\phi \\ \sin\psi\cos\theta & \sin\psi\sin\theta\sin\phi + \cos\psi\cos\phi & \sin\psi\sin\theta\cos\phi - \cos\psi\sin\phi \\ -\sin\theta & \cos\theta\sin\phi & \cos\theta\cos\phi  
+\begin{equation} R_b^G = \begin{bmatrix}   c_\psi c_\theta &  c_\psi s_\theta s_\phi -  s_\psi c_\phi &  c_\psi s_\theta c_\phi +  s_\psi s_\phi \\  s_\psi c_\theta &  s_\psi s_\theta s_\phi +  c_\psi c_\phi &  s_\psi s_\theta c_\phi -  c_\psi s_\phi \\ - s_\theta &  c_\theta s_\phi &  c_\theta c_\phi  
 \end{bmatrix}
 \label{eq:R_b^G}\end{equation}
+
+
 
 
 \subsubsection{Kinematic Relationship Between Body Rates and Euler Rates}
@@ -349,35 +351,38 @@ Using equation (\ref{eq:R_b^G}) for $R_b^G$ we can rotate these forces in the bo
 $$F_T^G = R_b^G\cdot F_T^b =R_b^G\begin{bmatrix}
     0\\0\\K_T\sum^4_{i=1}\omega_i^2
 \end{bmatrix} $$
-$$F_T^G = \begin{array}{l}
-\left[\begin{array}{c}
--K_T \,{\left[\sin \left(\phi \right)\,\sin \left(\psi \right)+\cos \left(\phi \right)\,\cos \left(\psi \right)\,\sin \left(\theta \right)\right]}\,({\omega_1 }^2 +{\omega_2 }^2 +{\omega_3 }^2 +{\omega_4 }^2) \\
-K_T \,{\left[\cos \left(\psi \right)\,\sin \left(\phi \right)-\cos \left(\phi \right)\,\sin \left(\psi \right)\,\sin \left(\theta \right)\right]}\,({\omega_1 }^2 +{\omega_2 }^2 +{\omega_3 }^2 +{\omega_4 }^2) \\
--K_T \,\cos \left(\phi \right)\,\cos \left(\theta \right)\,({\omega_1 }^2 +{\omega_2 }^2 +{\omega_3 }^2 +{\omega_4 }^2) 
-\end{array}\right]\\
-\mathrm{}\\
-\end{array}$$
-\textbf{Summing the Gravity, Drag, and Thrust forces and dividing mass to determine acceleration in the body frame:}
-$$\begin{bmatrix}
-    \ddot{X}^G\\\ddot{Y}^G\\\ddot{Z}^G
-\end{bmatrix} = \begin{array}{l}
-\left[\begin{array}{c}\frac{1}{m}\left[
-K_{d,x} \,\dot{X}^G-K_T \,{\left(\sin \left(\phi \right)\,\sin \left(\psi \right)+\cos \left(\phi \right)\,\cos \left(\psi \right)\,\sin \left(\theta \right)\right)}\,\cdot\left({\omega_1 }^2 +{\omega_2 }^2 +{\omega_3 }^2 +{\omega_4 }^2\right)  \right]\\
-\frac{1}{m}\left[K_{d,y} \,\dot{Y}^G+K_T \,{\left(\cos \left(\psi \right)\,\sin \left(\phi \right)-\cos \left(\phi \right)\,\sin \left(\psi \right)\,\sin \left(\theta \right)\right)}\,\cdot\left({\omega_1 }^2 +{\omega_2 }^2 +{\omega_3 }^2 +{\omega_4 }^2\right) \right]\\
-\frac{1}{m}\left[K_{d,z} \,\dot{Z}^G+g\,m-K_T \,\cos \left(\phi \right)\,\cos \left(\theta \right)\,\cdot\left({\omega_1 }^2 +{\omega_2 }^2 +{\omega_3 }^2 +{\omega_4 }^2\right) \right]
-\end{array}\right]
-\end{array}$$
+$$F_T^G =  \begin{bmatrix}   c_\psi c_\theta &  c_\psi s_\theta s_\phi -  s_\psi c_\phi &  c_\psi s_\theta c_\phi +  s_\psi s_\phi \\  s_\psi c_\theta &  s_\psi s_\theta s_\phi +  c_\psi c_\phi &  s_\psi s_\theta c_\phi -  c_\psi s_\phi \\ - s_\theta &  c_\theta s_\phi &  c_\theta c_\phi  
+\end{bmatrix} \begin{bmatrix}
+    0\\0\\K_T\sum^4_{i=1}\omega_i^2
+\end{bmatrix}$$
 
-
-$$\begin{bmatrix}
+\textbf{Summing the Gravity, Drag, and Thrust forces} 
+$$m\begin{bmatrix}
     \ddot{X}^G\\\ddot{Y}^G\\\ddot{Z}^G
-\end{bmatrix} = \frac{1}{m}
+\end{bmatrix} = \begin{bmatrix}
+0\\0\\mg
+\end{bmatrix}+\begin{bmatrix}
+    K_{d,x}&0&0\\0&K_{d,y}&0\\0&0&K_{d,z}
+\end{bmatrix}
 \begin{bmatrix}
-K_{d,x} \,\dot{X}^G & - \,{\left(\sin \left(\phi \right)\,\sin \left(\psi \right)+\cos \left(\phi \right)\,\cos \left(\psi \right)\,\sin \left(\theta \right)\right)}\\
-K_{d,y} \,\dot{Y}^G& \,{\left(\cos \left(\psi \right)\,\sin \left(\phi \right)-\cos \left(\phi \right)\,\sin \left(\psi \right)\,\sin \left(\theta \right)\right)}\\\
-K_{d,z} \,\dot{Z}^G+g\,m&- \,\cos \left(\phi \right)\,\cos \left(\theta \right)
-\end{bmatrix}\begin{bmatrix}
-    1\\K_T\left({\omega_1 }^2 +{\omega_2 }^2 +{\omega_3 }^2 +{\omega_4 }^2\right) 
+    \dot{X}^G\\\dot{Y}^G\\\dot{Z}^G
+\end{bmatrix} +\begin{bmatrix}   c_\psi c_\theta &  c_\psi s_\theta s_\phi -  s_\psi c_\phi &  c_\psi s_\theta c_\phi +  s_\psi s_\phi \\  s_\psi c_\theta &  s_\psi s_\theta s_\phi +  c_\psi c_\phi &  s_\psi s_\theta c_\phi -  c_\psi s_\phi \\ - s_\theta &  c_\theta s_\phi &  c_\theta c_\phi  
+\end{bmatrix} \begin{bmatrix}
+    0\\0\\K_T\sum^4_{i=1}\omega_i^2
+\end{bmatrix}$$
+\textbf{Dividing mass to determine acceleration in the body frame:}
+$$\begin{bmatrix}
+    \ddot{X}^G\\\ddot{Y}^G\\\ddot{Z}^G
+\end{bmatrix} = \begin{bmatrix}
+0\\0\\g
+\end{bmatrix}+\begin{bmatrix}
+    \frac{K_{d,x}}{m}&0&0\\0&\frac{K_{d,y}}{m}&0\\0&0&\frac{K_{d,z}}{m}
+\end{bmatrix}
+\begin{bmatrix}
+    \dot{X}^G\\\dot{Y}^G\\\dot{Z}^G
+\end{bmatrix} +\begin{bmatrix}   c_\psi c_\theta &  c_\psi s_\theta s_\phi -  s_\psi c_\phi &  c_\psi s_\theta c_\phi +  s_\psi s_\phi \\  s_\psi c_\theta &  s_\psi s_\theta s_\phi +  c_\psi c_\phi &  s_\psi s_\theta c_\phi -  c_\psi s_\phi \\ - s_\theta &  c_\theta s_\phi &  c_\theta c_\phi  
+\end{bmatrix} \begin{bmatrix}
+    0\\0\\\frac{K_T}{m}\sum^4_{i=1}\omega_i^2
 \end{bmatrix}$$
 \subsection{Rotational Dynamics}
 Using Newtons second for rotational motion:
@@ -402,23 +407,6 @@ Expanding the Cross Coupling term discussed earlier:
     I_x&0&0\\0&I_y&0\\0&0&I_z
 \end{bmatrix}\begin{bmatrix}
     \dot{\phi}\\\dot{\theta}\\\dot{\psi}
-\end{bmatrix}\\
-    &=\begin{bmatrix}
-    \dot{\phi}\\\dot{\theta}\\\dot{\psi}
-\end{bmatrix} \times \begin{bmatrix}
-    I_x\dot{\phi}+0+0\\0+I_y\dot{\theta}+0\\0+0+I_z\dot{\psi}\end{bmatrix}=\begin{bmatrix}
-    \dot{\phi}\\\dot{\theta}\\\dot{\psi}
-\end{bmatrix} \times \begin{bmatrix}
-    I_x\dot{\phi}\\I_y\dot{\theta}\\I_z\dot{\psi}\end{bmatrix}\\
-    &=\begin{bmatrix}
-I_z \dot{\psi} \,\dot{\theta} -I_y \,\dot{\psi} \,\dot{\theta} \\
-I_x \,\dot{\phi} \,\dot{\psi} -I_z \,\dot{\phi} \,\dot{\psi} \\
-I_y \,\dot{\phi} \,\dot{\theta} -I_x \,\dot{\phi} \,\dot{\theta }
-\end{bmatrix}\\
-    &=\begin{bmatrix}
-\dot{\psi} \,\dot{\theta}(I_z  -I_y) \\
-\,\dot{\phi} \,\dot{\psi}(I_x -I_z ) \\
-\dot{\phi} \,\dot{\theta}(I_y -I_x )
 \end{bmatrix}
 \end{align*}
 \subsubsection{Propeller and Motor Torques}
@@ -505,51 +493,59 @@ $$\mathbf{\tau_g} = \begin{bmatrix}
 \end{bmatrix}\times \begin{bmatrix}
     0\\0\\1
 \end{bmatrix} I_r (\omega_1-\omega_2+\omega_3-\omega_4)$$
-$$\mathbf{\tau_g} == \begin{bmatrix}
+$$\boxed{\mathbf{\tau_g} = \begin{bmatrix}
     \dot{\phi}\\\dot{\theta}\\\dot{\psi}
 \end{bmatrix}\times\left[\begin{array}{c}
 0\\
 0\\
 I_r \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}
-\end{array}\right]$$
-$$\boxed{\mathbf{\tau_g}=\left[\begin{array}{c}
-I_r \,\theta \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}\\
--I_r \,\phi \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}\\
-0
 \end{array}\right]}$$
+
 Substituting terms back into the original equation:
 $$I_b\dot{\omega} = \tau_m+\tau_g-(\omega\times I_b\omega)$$
-$$I_b\dot{\omega} = \begin{bmatrix}
+
+$$\begin{bmatrix}
+    I_x&0&0\\0&I_y&0\\0&0&I_z
+\end{bmatrix}\begin{bmatrix}
+    \ddot{\phi}\\\ddot{\theta}\\\ddot{\psi}
+\end{bmatrix} = \begin{bmatrix}
     L_{F,y}K_T\,\left(\omega_3^2+\omega^2_2-\omega^2_4-\omega^2_1\right)\\
     L_{F,x}K_T\,\left(\omega_4^2+\omega^2_3-\omega^2_2-\omega^2_1\right)\\
     K_D(\omega_1^2-\omega_2^2+\omega_3^2-\omega_4^2)
-\end{bmatrix}+\left[\begin{array}{c}
-I_r \,\theta \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}\\
--I_r \,\phi \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}\\
-0
-\end{array}\right]-\begin{bmatrix}
-\dot{\psi} \,\dot{\theta}(I_z  -I_y) \\
-\,\dot{\phi} \,\dot{\psi}(I_x -I_z ) \\
-\dot{\phi} \,\dot{\theta}(I_y -I_x )
-\end{bmatrix}$$
-$$I_b\dot{\omega} = \begin{bmatrix}
-    L_{F,y}K_T\,\left(\omega_3^2+\omega^2_2-\omega^2_4-\omega^2_1\right) + I_r \,\theta \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}+\dot{\psi} \,\dot{\theta}(I_z  -I_y)\\
-    L_{F,x}K_T\,\left(\omega_4^2+\omega^2_3-\omega^2_2-\omega^2_1\right)-I_r \,\phi \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}+\dot{\phi} \,\dot{\psi}(I_x -I_z )\\
-    K_D(\omega_1^2-\omega_2^2+\omega_3^2-\omega_4^2)+\dot{\phi} \,\dot{\theta}(I_y -I_x )
-\end{bmatrix}$$
-Dividing by Inertia term and solving for angular acceleration:
-$$\dot{\omega} = \begin{bmatrix}
-    \frac{1}{I_x}\left[L_{F,y}K_T\,\left(\omega_3^2+\omega^2_2-\omega^2_4-\omega^2_1\right) + I_r \,\theta \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}+\dot{\psi} \,\dot{\theta}(I_z  -I_y)\right]\\
-    \frac{1}{I_y}\left[L_{F,x}K_T\,\left(\omega_4^2+\omega^2_3-\omega^2_2-\omega^2_1\right)-I_r \,\phi \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}+\dot{\phi} \,\dot{\psi}(I_x -I_z )\right]\\
-    \frac{1}{I_z}\left[K_D(\omega_1^2-\omega_2^2+\omega_3^2-\omega_4^2)+\dot{\phi} \,\dot{\theta}(I_y -I_x )\right]
-\end{bmatrix}$$
+\end{bmatrix}+\left( \begin{bmatrix}
+    \dot{\phi}\\\dot{\theta}\\\dot{\psi}
+\end{bmatrix}\times\left[\begin{array}{c}
+0\\
+0\\
+I_r \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}
+\end{array}\right]\right)-\left(\begin{bmatrix}
+    \dot{\phi}\\\dot{\theta}\\\dot{\psi}
+\end{bmatrix} \times \begin{bmatrix}
+    I_x&0&0\\0&I_y&0\\0&0&I_z
+\end{bmatrix}\begin{bmatrix}
+    \dot{\phi}\\\dot{\theta}\\\dot{\psi}
+\end{bmatrix}\right)$$
 $$\begin{bmatrix}
     \ddot{\phi}\\\ddot{\theta}\\\ddot{\psi}
-\end{bmatrix}= \begin{bmatrix}
-    \frac{1}{I_x}\left[L_{F,y}K_T\,\left(\omega_3^2+\omega^2_2-\omega^2_4-\omega^2_1\right) + I_r \,\theta \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}+r \,q(I_z  -I_y)\right]\\
-    \frac{1}{I_y}\left[L_{F,x}K_T\,\left(\omega_4^2+\omega^2_3-\omega^2_2-\omega^2_1\right)-I_r \,\phi \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}+p \,r(I_x -I_z )\right]\\
-    \frac{1}{I_z}\left[K_D(\omega_1^2-\omega_2^2+\omega_3^2-\omega_4^2)+p \,q(I_y -I_x )\right]
-\end{bmatrix}$$
+\end{bmatrix} = \begin{bmatrix}
+    \frac{1}{I_x}&0&0\\0&\frac{1}{I_y}&0\\0&0&\frac{1}{I_z}
+\end{bmatrix}\left(\begin{bmatrix}
+    L_{F,y}K_T\,\left(\omega_3^2+\omega^2_2-\omega^2_4-\omega^2_1\right)\\
+    L_{F,x}K_T\,\left(\omega_4^2+\omega^2_3-\omega^2_2-\omega^2_1\right)\\
+    K_D(\omega_1^2-\omega_2^2+\omega_3^2-\omega_4^2)
+\end{bmatrix}+\left( \begin{bmatrix}
+    \dot{\phi}\\\dot{\theta}\\\dot{\psi}
+\end{bmatrix}\times\left[\begin{array}{c}
+0\\
+0\\
+I_r \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}
+\end{array}\right]\right)-\left(\begin{bmatrix}
+    \dot{\phi}\\\dot{\theta}\\\dot{\psi}
+\end{bmatrix} \times \begin{bmatrix}
+    I_x&0&0\\0&I_y&0\\0&0&I_z
+\end{bmatrix}\begin{bmatrix}
+    \dot{\phi}\\\dot{\theta}\\\dot{\psi}
+\end{bmatrix}\right)\right)$$
 \section{Full Equations of motions}
 Our states are
 \begin{itemize}
@@ -567,32 +563,50 @@ Our states are
     \item $\dot{\psi}$
 \end{itemize}
 
-The derivatives of these states have been defined in the previous sections, and, are summarized here as the full equations of motion:
+The derivatives of these states have been defined in the previous sections, and, are summarized here as the full equations of motion:\tiny
 \begin{align*}
 \begin{bmatrix}
     \dot{X}^G\\\dot{Y}^G\\\dot{Z}^G
-\end{bmatrix} &= \begin{bmatrix}  \cos\psi\cos\theta & \cos\psi\sin\theta\sin\phi - \sin\psi\cos\phi & \cos\psi\sin\theta\cos\phi + \sin\psi\sin\phi \\ \sin\psi\cos\theta & \sin\psi\sin\theta\sin\phi + \cos\psi\cos\phi & \sin\psi\sin\theta\cos\phi - \cos\psi\sin\phi \\ -\sin\theta & \cos\theta\sin\phi & \cos\theta\cos\phi  
-\end{bmatrix}\begin{bmatrix}
+\end{bmatrix} &= \underbrace{\begin{bmatrix}   c_\psi c_\theta &  c_\psi s_\theta s_\phi -  s_\psi c_\phi &  c_\psi s_\theta c_\phi +  s_\psi s_\phi \\  s_\psi c_\theta &  s_\psi s_\theta s_\phi +  c_\psi c_\phi &  s_\psi s_\theta c_\phi -  c_\psi s_\phi \\ - s_\theta &  c_\theta s_\phi &  c_\theta c_\phi  
+\end{bmatrix}}_{R_b^G}\begin{bmatrix}
     \dot{x_b}\\\dot{y_b}\\\dot{z_b}
-\end{bmatrix}\\
+\end{bmatrix}\\\\
 \begin{bmatrix}
     \ddot{X}^G\\\ddot{Y}^G\\\ddot{Z}^G
-\end{bmatrix} &= \begin{array}{l}
-\left[\begin{array}{c}\frac{1}{m}\left[
-K_{d,x} \,\dot{X}^G-K_T \,{\left(\sin \left(\phi \right)\,\sin \left(\psi \right)+\cos \left(\phi \right)\,\cos \left(\psi \right)\,\sin \left(\theta \right)\right)}\,\cdot\left({\omega_1 }^2 +{\omega_2 }^2 +{\omega_3 }^2 +{\omega_4 }^2\right)  \right]\\
-\frac{1}{m}\left[K_{d,y} \,\dot{Y}^G+K_T \,{\left(\cos \left(\psi \right)\,\sin \left(\phi \right)-\cos \left(\phi \right)\,\sin \left(\psi \right)\,\sin \left(\theta \right)\right)}\,\cdot\left({\omega_1 }^2 +{\omega_2 }^2 +{\omega_3 }^2 +{\omega_4 }^2\right) \right]\\
-\frac{1}{m}\left[K_{d,z} \,\dot{Z}^G+g\,m-K_T \,\cos \left(\phi \right)\,\cos \left(\theta \right)\,\cdot\left({\omega_1 }^2 +{\omega_2 }^2 +{\omega_3 }^2 +{\omega_4 }^2\right) \right]
-\end{array}\right]
-\end{array}\\
-\begin{bmatrix} \dot{\phi} \\ \dot{\theta} \\ \dot{\psi} \end{bmatrix} &= \begin{bmatrix} 1 & \sin\phi\tan\theta & \cos\phi\tan\theta \\ 0 & \cos\phi & -\sin\phi \\ 0 & \frac{\sin\phi}{\cos\theta} & \frac{\cos\phi}{\cos\theta} \end{bmatrix}\begin{bmatrix} p \\ q \\ r \end{bmatrix}\\
+\end{bmatrix} &= \begin{bmatrix}
+0\\0\\g
+\end{bmatrix}+\underbrace{\begin{bmatrix}
+    \frac{K_{d,x}}{m}&0&0\\0&\frac{K_{d,y}}{m}&0\\0&0&\frac{K_{d,z}}{m}
+\end{bmatrix}}_{\text{Body Drag Coeff. Matrix}}
+\begin{bmatrix}
+    \dot{X}^G\\\dot{Y}^G\\\dot{Z}^G
+\end{bmatrix} +\underbrace{\begin{bmatrix}   c_\psi c_\theta &  c_\psi s_\theta s_\phi -  s_\psi c_\phi &  c_\psi s_\theta c_\phi +  s_\psi s_\phi \\  s_\psi c_\theta &  s_\psi s_\theta s_\phi +  c_\psi c_\phi &  s_\psi s_\theta c_\phi -  c_\psi s_\phi \\ - s_\theta &  c_\theta s_\phi &  c_\theta c_\phi  
+\end{bmatrix}}_{R_b^G} \underbrace{\begin{bmatrix}
+    0\\0\\\frac{K_T}{m}\sum^4_{i=1}\omega_i^2
+\end{bmatrix}}_{\text{Motor Control Force}}\\\\
+\begin{bmatrix} \dot{\phi} \\ \dot{\theta} \\ \dot{\psi} \end{bmatrix} &= \begin{bmatrix} 1 & \sin\phi\tan\theta & \cos\phi\tan\theta \\ 0 & \cos\phi & -\sin\phi \\ 0 & \frac{\sin\phi}{\cos\theta} & \frac{\cos\phi}{\cos\theta} \end{bmatrix}\begin{bmatrix} p \\ q \\ r \end{bmatrix}\\\\
 \begin{bmatrix}
     \ddot{\phi}\\\ddot{\theta}\\\ddot{\psi}
-\end{bmatrix} &= \begin{bmatrix}
-    \frac{1}{I_x}\left[L_{F,y}K_T\left(\omega_3^2+\omega^2_2-\omega^2_4-\omega^2_1\right) + I_rq{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}+rq(I_z  -I_y)\right]\\
-    \frac{1}{I_y}\left[L_{F,x}K_T\left(\omega_4^2+\omega^2_3-\omega^2_2-\omega^2_1\right)-I_rp \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}+pr(I_x -I_z )\right]\\
-    \frac{1}{I_z}\left[K_D(\omega_1^2-\omega_2^2+\omega_3^2-\omega_4^2)+pq(I_y -I_x )\right]
-\end{bmatrix}
-\end{align*}
+\end{bmatrix} &= \underbrace{\begin{bmatrix}
+    \frac{1}{I_x}&0&0\\0&\frac{1}{I_y}&0\\0&0&\frac{1}{I_z}
+\end{bmatrix}}_{\text{Inverse $I_b$ Matrix}}\left( \underbrace{\begin{bmatrix}
+    \dot{\phi}\\\dot{\theta}\\\dot{\psi}
+\end{bmatrix}\times\left[\begin{array}{c}
+0\\
+0\\
+I_r \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}
+\end{array}\right]}_{\text{Gyroscopic Precession from Propellers}}-\underbrace{\begin{bmatrix}
+    \dot{\phi}\\\dot{\theta}\\\dot{\psi}
+\end{bmatrix} \times \begin{bmatrix}
+    I_x&0&0\\0&I_y&0\\0&0&I_z
+\end{bmatrix}\begin{bmatrix}
+    \dot{\phi}\\\dot{\theta}\\\dot{\psi}
+\end{bmatrix}}_{\text{Gyroscopic Cross Coupling (Eulers)}}\right)  +\underbrace{\begin{bmatrix}
+    \frac{L_{F,y}}{I_x}\,\left(K_{T_1}\omega_3^2+K_{T_2}\omega^2_2-K_{T_3}\omega^2_4-K_{T_4}\omega^2_1\right)\\
+    \frac{L_{F,x}}{I_y}\,\left(K_{T_1}\omega_4^2+K_{T_1}\omega^2_3-K_{T_1}\omega^2_2-K_{T_1}\omega^2_1\right)\\
+    \frac{1}{I_z}(K_{D_1}\omega_1^2-K_{D_2}\omega_2^2+K_{D_3}\omega_3^2-K_{D_4}\omega_4^2)
+\end{bmatrix}}_{\text{Motor Control Torques}}
+\end{align*}}
 \section{drawings}
 \subsection{Top View}
 \begin{center}
