@@ -49,9 +49,10 @@ Below is a list of GitHub issues and pull requests completed in the past 14 days
 {activity_text}
 
 Please generate a concise, executive-level bi-weekly summary with the following structure:
-1. **Key Accomplishments** (Categorized by subsystem or topic)
-2. **Impact & Sprint Progress** (Brief summary of project momentum over the two-week cycle)
-3. **Contributors Highlight** (Acknowledge team contributions)
+1. **Key Accomplishments** This should be sort of in depth, where you can look into the code at the work actually done, talk about it, and who generally was responsible for each thing worked on 
+2. **Impact & Sprint Progress** (Brief summary of project momentum over the two-week cycle, how it relates to milestones amd other week)
+3. **Plan Going Forward** Discuss the new issues created, what they'll focus on, how they connect ect. 
+4. **Areas of issue** talk about things which team members went back and redid again and again, what were they working on, did they get it working?
 """
 
 summary_md = None
