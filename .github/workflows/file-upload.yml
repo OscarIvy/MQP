@@ -2,7 +2,7 @@ name: Process Uploaded Artifacts
 
 on:
   issues:
-    types: [opened, edited]
+    types: [opened, edited, labeled]
 
 permissions:
   contents: write
@@ -11,7 +11,6 @@ permissions:
 jobs:
   extract-attachments:
     runs-on: ubuntu-latest
-    if: contains(github.event.issue.labels.*.name, 'file-submission')
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -19,11 +18,18 @@ jobs:
       - name: Download & Organize Attached Files
         env:
           ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
+          # Verify this issue is a file submission by title prefix
+          if [[ "$ISSUE_TITLE" != *"[UPLOAD]:"* ]]; then
+            echo "Not a file submission issue. Skipping execution."
+            exit 0
+          fi
+
           # Create target directories if they don't exist
           mkdir -p CAD Excel Documents
           
-          # Extract URL links from the issue body text
+          # Extract downloadable URL links from issue body
           URLS=$(echo "$ISSUE_BODY" | grep -oE 'https://github.com/user-attachments/files/[^ ")]+' || true)
 
           if [ -z "$URLS" ]; then
@@ -50,7 +56,7 @@ jobs:
             esac
           done
 
-          # Configure Git Bot and commit new files
+          # Configure Git Bot and commit newly downloaded files
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
@@ -62,7 +68,7 @@ jobs:
             echo "No new changes to commit."
           fi
 
-      - name: Comment and Close Issue
+      - name: Comment on Issue
         uses: peter-evans/create-or-update-comment@v3
         with:
           issue-number: ${{ github.event.issue.number }}
