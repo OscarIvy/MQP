@@ -1,9 +1,7 @@
 name: Weekly Work Summary
 
 on:
-  workflow_dispatch: # Enables manual trigger from GitHub UI / API
-  schedule:
-    - cron: '0 17 * * 5' # Optional: Keep the scheduled run, or delete this line to ONLY run manually
+  workflow_dispatch:
 
 jobs:
   summarize-weekly-work:
@@ -19,7 +17,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install requests openai
+          python -m pip install --upgrade pip
+          pip install requests google-genai
 
       - name: Fetch Weekly Data and Generate Summary
         env:
