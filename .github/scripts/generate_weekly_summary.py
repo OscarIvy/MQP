@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import datetime
 import requests
 from google import genai
@@ -37,11 +38,10 @@ for item in items:
 
 activity_text = "\n".join(completed_items) if completed_items else "No closed issues or merged PRs found in the past 14 days."
 
-# 3. Generate Summary Using Gemini API
-try:
-    client = genai.Client(api_key=GEMINI_API_KEY)
-    
-    prompt = f"""
+# 3. Generate Summary Using Gemini API with Retry Logic
+client = genai.Client(api_key=GEMINI_API_KEY)
+
+prompt = f"""
 You are an engineering project manager overseeing a quadrotor engineering repository. 
 
 Below is a list of GitHub issues and pull requests completed in the past 14 days:
@@ -54,19 +54,29 @@ Please generate a concise, executive-level bi-weekly summary with the following 
 3. **Contributors Highlight** (Acknowledge team contributions)
 """
 
-    response = client.models.generate_content(
-        model="gemini-3.8-flash",
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            temperature=0.2,
-            tools=[]
-        )
-    )
-    summary_md = response.text
+summary_md = None
+max_retries = 3
+delay = 5  # Initial delay in seconds
 
-except Exception as e:
-    print(f"Gemini API Error: {e}")
-    sys.exit(1)
+for attempt in range(1, max_retries + 1):
+    try:
+        # Using chat session to prevent AFC warnings
+        chat = client.chats.create(
+            model="gemini-3.8-flash",
+            config=types.GenerateContentConfig(temperature=0.2)
+        )
+        response = chat.send_message(prompt)
+        summary_md = response.text
+        break
+    except Exception as e:
+        print(f"Attempt {attempt} failed with error: {e}")
+        if attempt < max_retries:
+            print(f"Retrying in {delay} seconds...")
+            time.sleep(delay)
+            delay *= 2
+        else:
+            print("Max retries reached. Exiting.")
+            sys.exit(1)
 
 # 4. Post Summary as a New GitHub Issue
 post_url = f"https://api.github.com/repos/{REPO}/issues"
