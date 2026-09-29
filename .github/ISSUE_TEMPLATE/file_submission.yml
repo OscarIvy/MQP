@@ -5,7 +5,14 @@ labels: ["file-submission"]
 body:
   - type: markdown
     attributes:
-      value: "Use this form to submit engineering files (CAD, Excel, PDFs) directly into the repository."
+      value: |
+        Use this form to submit engineering files (CAD, Excel, PDFs) directly into the repository.
+
+        **Before you start:**
+        - Zip any CAD files (`.step`, `.stl`, `.f3d`, `.sldprt`). GitHub can't attach them directly.
+        - Keep each file under 25 MB.
+        - Keep `[UPLOAD]:` at the start of the title.
+        - Wait for each file's link to appear in the "Attach Files" box before you submit.
 
   - type: input
     id: uploader
@@ -19,7 +26,7 @@ body:
     id: summary
     attributes:
       label: "Summary / Commit Note"
-      description: "Briefly explain what changed or why you are uploading these files."
+      description: "One clear line about what changed or why you are uploading these files. Only the first line is used as the commit message."
       placeholder: "e.g., Updated weight estimates for motor mounts and added revised CAD."
     validations:
       required: false
@@ -28,7 +35,7 @@ body:
     id: addresses_issues
     attributes:
       label: "Addresses / Closes Issues"
-      description: "Enter issue numbers addressed by this upload (e.g., #12, #15)."
+      description: "Enter issue numbers addressed by this upload (e.g., #12, #15). They close automatically."
       placeholder: "#12, #15"
     validations:
       required: false
@@ -50,7 +57,7 @@ body:
     id: attachments
     attributes:
       label: "Attach Files"
-      description: "Drag and drop your files here (.xlsx, .csv, .pdf, .docx, or a .zip for CAD files like .step/.stl). Max 25 MB per file."
+      description: "Drag and drop your files here (.xlsx, .csv, .pdf, .docx, or a .zip for CAD files). Max 25 MB per file."
       placeholder: "Drop files here..."
     validations:
       required: true
