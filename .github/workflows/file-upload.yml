@@ -15,25 +15,57 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Download & Organize Attached Files
+      - name: Download, Parse Metadata & Organize Files
         env:
           ISSUE_BODY: ${{ github.event.issue.body }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Verify this issue is a file submission by title prefix
+          # Verify title prefix
           if [[ "$ISSUE_TITLE" != *"[UPLOAD]:"* ]]; then
-            echo "Not a file submission issue. Skipping execution."
+            echo "Not a file submission issue. Skipping."
             exit 0
           fi
 
-          # Create target directories if they don't exist
+          # 1. Parse Issue Fields using Python
+          python -c "
+          import os, re
+
+          body = os.getenv('ISSUE_BODY', '')
+
+          # Parse Summary
+          summary_match = re.search(r'### Summary / Commit Note\s*\n\n(.*?)(?=\n\n###|\Z)', body, re.DOTALL)
+          summary = summary_match.group(1).strip() if summary_match else 'File submission'
+
+          # Parse Addressed Issues (#12, #15 -> fixes #12 fixes #15)
+          issues_match = re.search(r'### Addresses / Closes Issues\s*\n\n(.*?)(?=\n\n###|\Z)', body, re.DOTALL)
+          raw_issues = issues_match.group(1).strip() if issues_match else ''
+          issue_nums = re.findall(r'#(\d+)', raw_issues)
+          fixes_str = ' '.join([f'fixes #{num}' for num in issue_nums])
+
+          # Parse Custom Label
+          label_match = re.search(r'### Category Label\s*\n\n(.*?)(?=\n\n###|\Z)', body, re.DOTALL)
+          custom_label = label_match.group(1).strip() if label_match else ''
+
+          # Write variables to environment
+          with open(os.environ['GITHUB_ENV'], 'a') as f:
+              f.write(f'COMMIT_SUMMARY={summary}\n')
+              f.write(f'FIXES_STR={fixes_str}\n')
+              f.write(f'CUSTOM_LABEL={custom_label}\n')
+          "
+
+          # 2. Add parsed category label to GitHub Issue if provided
+          if [ -n "$CUSTOM_LABEL" ] && [ "$CUSTOM_LABEL" != "None" ]; then
+            gh issue edit "$ISSUE_NUMBER" --add-label "$CUSTOM_LABEL" || true
+          fi
+
+          # 3. Download and Organize Attachments
           mkdir -p CAD Excel Documents
-          
-          # Extract downloadable URL links from issue body
           URLS=$(echo "$ISSUE_BODY" | grep -oE 'https://github.com/user-attachments/files/[^ ")]+' || true)
 
           if [ -z "$URLS" ]; then
-            echo "No attachments found in issue body."
+            echo "No attachments found."
             exit 0
           fi
 
@@ -42,7 +74,6 @@ jobs:
             echo "Downloading $filename..."
             curl -sL "$url" -o "tmp_$filename"
 
-            # Route files automatically based on extension
             case "$filename" in
               *.step|*.stp|*.stl|*.f3d|*.sldprt)
                 mv "tmp_$filename" "CAD/$filename"
@@ -56,26 +87,28 @@ jobs:
             esac
           done
 
-          # Configure Git Bot and commit newly downloaded files
+          # 4. Construct Git Commit Message
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
+
           if [[ $(git status --porcelain) ]]; then
+            # Format: <Summary> (<fixes #X>) [skip ci]
+            COMMIT_TITLE="$COMMIT_SUMMARY"
+            if [ -n "$FIXES_STR" ]; then
+              COMMIT_TITLE="$COMMIT_TITLE ($FIXES_STR)"
+            fi
+            COMMIT_TITLE="$COMMIT_TITLE [skip ci]"
+
             git add CAD/ Excel/ Documents/
-            git commit -m "Add uploaded files from Issue #${{ github.event.issue.number }} [skip ci]"
+            git commit -m "$COMMIT_TITLE" -m "Uploaded via Issue #${ISSUE_NUMBER}"
             git push
           else
-            echo "No new changes to commit."
+            echo "No changes to commit."
           fi
 
-      - name: Comment on Issue
-        uses: peter-evans/create-or-update-comment@v3
-        with:
-          issue-number: ${{ github.event.issue.number }}
-          body: "Files have been automatically extracted and committed to the repository in their respective folders!"
-
-      - name: Close Issue
-        run: |
-          gh issue close ${{ github.event.issue.number }}
+      - name: Comment and Close Issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue comment ${{ github.event.issue.number }} --body "Files extracted, labeled, and committed to repository automatically!"
+          gh issue close ${{ github.event.issue.number }}
