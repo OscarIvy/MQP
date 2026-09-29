@@ -38,6 +38,9 @@ activity_text = "\n".join(completed_items) if completed_items else "No closed is
 
 # 3. Generate Summary Using Gemini API (Free Tier)
 # 3. Generate Summary Using Gemini API (Free Tier)
+from google.genai import types
+
+# 3. Generate Summary Using Gemini API (Free Tier)
 try:
     client = genai.Client(api_key=GEMINI_API_KEY)
     
@@ -55,8 +58,11 @@ Please generate a concise, executive-level bi-weekly summary with the following 
 """
 
     response = client.models.generate_content(
-        model="gemini-1.5-flash",
-        contents=prompt
+        model="gemini-2.0-flash",
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            temperature=0.2,
+        )
     )
     summary_md = response.text
 
