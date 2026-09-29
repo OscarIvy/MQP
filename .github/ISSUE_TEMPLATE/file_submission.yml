@@ -1,24 +1,81 @@
-name: "File Upload / Resource Submission"
-description: "Upload CAD models, Excel spreadsheets, or documentation to the repo"
-title: "[UPLOAD]: "
-labels: ["file-submission"]
-body:
-  - type: markdown
-    attributes:
-      value: |
-        Use this form to submit engineering files (CAD, Excel, PDFs) directly into the repository.
-  - type: input
-    id: uploader
-    attributes:
-      label: "Your Name / System Component"
-      placeholder: "e.g., Frame CAD, Battery Budget Sheet"
-    validations:
-      required: true
-  - type: textarea
-    id: attachments
-    attributes:
-      label: "Attach Files"
-      description: "Drag and drop your files here (.step, .stl, .xlsx, .pdf, etc.)"
-      placeholder: "Drop files here..."
-    validations:
-      required: true
+name: Process Uploaded Artifacts
+
+on:
+  issues:
+    types: [opened, edited, labeled]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  extract-attachments:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download & Organize Attached Files
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+        run: |
+          # Verify this issue is a file submission (either by title prefix or label)
+          if [[ "$ISSUE_TITLE" != *"[UPLOAD]:"* ]]; then
+            echo "Not a file submission issue. Skipping execution."
+            exit 0
+          fi
+
+          # Create target directories
+          mkdir -p CAD Excel Documents
+          
+          # Extract URL links from the issue body text
+          URLS=$(echo "$ISSUE_BODY" | grep -oE 'https://github.com/user-attachments/files/[^ ")]+' || true)
+
+          if [ -z "$URLS" ]; then
+            echo "No attachments found in issue body."
+            exit 0
+          fi
+
+          for url in $URLS; do
+            filename=$(basename "$url")
+            echo "Downloading $filename..."
+            curl -sL "$url" -o "tmp_$filename"
+
+            # Route files automatically based on extension
+            case "$filename" in
+              *.step|*.stp|*.stl|*.f3d|*.sldprt)
+                mv "tmp_$filename" "CAD/$filename"
+                ;;
+              *.xlsx|*.xls|*.csv)
+                mv "tmp_$filename" "Excel/$filename"
+                ;;
+              *)
+                mv "tmp_$filename" "Documents/$filename"
+                ;;
+            esac
+          done
+
+          # Configure Git Bot and commit new files
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          if [[ $(git status --porcelain) ]]; then
+            git add CAD/ Excel/ Documents/
+            git commit -m "Add uploaded files from Issue #${{ github.event.issue.number }} [skip ci]"
+            git push
+          else
+            echo "No new changes to commit."
+          fi
+
+      - name: Comment and Close Issue
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: "Files have been automatically extracted and committed to the repository in their respective folders!"
+
+      - name: Close Issue
+        run: |
+          gh issue close ${{ github.event.issue.number }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
