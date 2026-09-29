@@ -1,0 +1,32 @@
+name: Overleaf Auto-Sync
+
+on:
+  schedule:
+    # Runs every 6 hours (adjust cron syntax as desired)
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # Allows manual triggering from the Actions tab
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Fetch Latest Code from Overleaf
+        uses: subhamx/overleaf_sync_with_git@master
+        with:
+          OVERLEAF_PROJECT_ID: ${{ secrets.OVERLEAF_PROJECT_ID }}
+          OVERLEAF_COOKIE: ${{ secrets.OVERLEAF_COOKIE }}
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          if [[ $(git status --porcelain) ]]; then
+            git add .
+            git commit -m "Auto-sync from Overleaf [skip ci]"
+            git push
+          else
+            echo "No changes detected from Overleaf."
+          fi
