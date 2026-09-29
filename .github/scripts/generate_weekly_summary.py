@@ -2,15 +2,15 @@ import os
 import sys
 import datetime
 import requests
-from openai import OpenAI
+from google import genai
 
-# 1. Read Environment Variables from GitHub Actions
+# 1. Read Environment Variables
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-REPO = os.getenv("GITHUB_REPOSITORY")  # Automatically provided as "owner/repo" by GitHub
+REPO = os.getenv("GITHUB_REPOSITORY")
 
-if not GITHUB_TOKEN or not OPENAI_API_KEY or not REPO:
-    print("Error: Missing required environment variables (GITHUB_TOKEN, OPENAI_API_KEY, or GITHUB_REPOSITORY).")
+if not GITHUB_TOKEN or not GEMINI_API_KEY or not REPO:
+    print("Error: Missing required environment variables (GITHUB_TOKEN, GEMINI_API_KEY, or GITHUB_REPOSITORY).")
     sys.exit(1)
 
 headers = {
@@ -18,7 +18,7 @@ headers = {
     "Accept": "application/vnd.github+json"
 }
 
-# 2. Fetch Closed Issues and Merged PRs from the Past 7 Days
+# 2. Fetch Closed Issues and Merged PRs from the Past 14 Days
 since_date = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=14)).strftime("%Y-%m-%dT%H:%M:%SZ")
 issues_url = f"https://api.github.com/repos/{REPO}/issues?state=closed&since={since_date}"
 
@@ -31,50 +31,49 @@ items = response.json()
 completed_items = []
 
 for item in items:
-    # Identify whether the item is a PR or an Issue
     item_type = "PR" if "pull_request" in item else "Issue"
     completed_items.append(f"- [{item_type} #{item['number']}] {item['title']} (by @{item['user']['login']})")
 
-activity_text = "\n".join(completed_items) if completed_items else "No closed issues or merged PRs found in the past 7 days."
+activity_text = "\n".join(completed_items) if completed_items else "No closed issues or merged PRs found in the past 14 days."
 
-# 3. Generate Summary Using OpenAI API
+# 3. Generate Summary Using Gemini API (Free Tier)
 try:
-    client = OpenAI(api_key=OPENAI_API_KEY)
+    client = genai.Client(api_key=GEMINI_API_KEY)
     
     prompt = f"""
 You are an engineering project manager overseeing a quadrotor engineering repository. 
 
-Below is a list of GitHub issues and pull requests completed in the past 7 days:
+Below is a list of GitHub issues and pull requests completed in the past 14 days:
 
 {activity_text}
 
-Please generate a concise, executive-level weekly summary with the following structure:
+Please generate a concise, executive-level bi-weekly summary with the following structure:
 1. **Key Accomplishments** (Categorized by subsystem or topic)
-2. **Impact & Sprint Progress** (Brief summary of project momentum)
+2. **Impact & Sprint Progress** (Brief summary of project momentum over the two-week cycle)
 3. **Contributors Highlight** (Acknowledge team contributions)
 """
 
-    completion = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}]
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt
     )
-    summary_md = completion.choices[0].message.content
+    summary_md = response.text
 
 except Exception as e:
-    print(f"OpenAI API Error: {e}")
+    print(f"Gemini API Error: {e}")
     sys.exit(1)
 
 # 4. Post Summary as a New GitHub Issue
 post_url = f"https://api.github.com/repos/{REPO}/issues"
 issue_payload = {
-    "title": f"Weekly Engineering Summary ({datetime.date.today()})",
+    "title": f"Bi-Weekly Engineering Summary ({datetime.date.today()})",
     "body": summary_md,
     "labels": ["documentation"]
 }
 
 post_response = requests.post(post_url, headers=headers, json=issue_payload)
 if post_response.status_code == 201:
-    print("Weekly summary issue created successfully!")
+    print("Bi-weekly summary issue created successfully!")
 else:
     print(f"Failed to create issue: {post_response.status_code} - {post_response.text}")
     sys.exit(1)
