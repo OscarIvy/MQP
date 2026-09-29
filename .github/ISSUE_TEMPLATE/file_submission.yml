@@ -50,7 +50,7 @@ body:
     id: attachments
     attributes:
       label: "Attach Files"
-      description: "Drag and drop your files here (.step, .stl, .xlsx, .pdf, etc.)"
+      description: "Drag and drop your files here (.xlsx, .csv, .pdf, .docx, or a .zip for CAD files like .step/.stl). Max 25 MB per file."
       placeholder: "Drop files here..."
     validations:
       required: true
