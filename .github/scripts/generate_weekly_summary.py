@@ -6,7 +6,7 @@ from openai import OpenAI
 
 # 1. Read Environment Variables from GitHub Actions
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 REPO = os.getenv("GITHUB_REPOSITORY")  # Automatically provided as "owner/repo" by GitHub
 
 if not GITHUB_TOKEN or not OPENAI_API_KEY or not REPO:
