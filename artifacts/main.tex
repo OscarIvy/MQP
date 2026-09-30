@@ -166,32 +166,7 @@ $$\begin{bmatrix}
 \end{bmatrix}\begin{bmatrix}
     x_b\\y_b\\z_b
 \end{bmatrix}$$
-\subsubsection{$R_b^G$ Rotational Matrix}
-The place I'm choosing to start here is just from a simple drawing of the situation we're dealing with. We have a world frame in which inertial forces are felt and acted in, in relation to that we have the body frame of the quadrotor. The world frame is the standard North East Down (corresponding to xyz respectively), where the body frame is "attatched" to the quadrotors center of mass, and, it's orientation is "attatched" to the orientation of the quadrotor. Given that the Vehicle we're modeling will have a camera on the "front" of it, we will chose that direction to be the x direction. A very simple drawing of these coordinate frames and their relation to one another can be seen below in Figure 
-
-\noindent These frames produce the following parameters. Note that the body roll rates (pqr) aren't shown, but, are the first derivatives of roll pitch and yaw respectively. 
-\small
-    \begin{align*}
-    X_G  &= \text{the global (North) position of the quadrotor (m)}\\
-    Y_G  &= \text{the global (East) position of the quadrotor (m)}\\
-    Z_G  &= \text{the global (Down) position of the quadrotor (m)}\\
-    x_b  &= \text{the local (North) position of the quadrotor (m)}\\
-    y_b  &= \text{the global (East) position of the quadrotor (m)}\\
-    z_b &= \text{the global (Down) position of the quadrotor (m)}\\
-    \phi  &= \text{roll angle along $x_b$ (radians)}\\
-    \theta &= \text{pitch angle along $y_b$ (radians)}\\
-    \psi &=\text{yaw angle along $z_b$ (radians)}\\
-    p &= \text{roll rate along + $x_b$ (radians/second)}\\
-    q &= \text{pitch rate along + $y_b$ (radians/second)}\\
-    r &= \text{yaw rate along + $z_b$ (radians/second)}
-\end{align*}
-Given that the relevant motion, rotation, and sensors are all happening on the body of the quadrotor, we need a way to translate state information from the body frame to the Global frame. This is done using a rotational matrix ($R_b^G$) such that:
-$$\begin{bmatrix}
-    X_G\\Y_G\\Z_G
-\end{bmatrix} = R^G_b\begin{bmatrix}
-    x_b\\y_b\\z_b
-\end{bmatrix}$$
-For this derivation we will make use of a sequence of Euler transformations. Rotational matrixes governing rotations about the principal axis' are defined by the following equations. 
+Repeating this process for rotations about each successive axis we get the following matrices:
 
 $$
     R_x(\phi) = \begin{bmatrix}
@@ -204,7 +179,7 @@ $$
         \cos\psi & -\sin\psi &0\\\sin\psi&\cos\psi & 0\\0&0&1
     \end{bmatrix}
 $$
-Using The Standard Z-Y-X Euler Sequence to get $R_b^G$:
+Post multiplying the Standard Z-Y-X Euler Sequence to get the final rotational matrix from the body frame to the global frame$R_b^G$:
 $$R_b^G = R_z(\psi) R_y(\theta) R_x(\phi) = \begin{bmatrix} \cos\psi & -\sin\psi & 0 \\ \sin\psi & \cos\psi & 0 \\ 0 & 0 & 1 \end{bmatrix} \begin{bmatrix} \cos\theta & 0 & \sin\theta \\ 0 & 1 & 0 \\ -\sin\theta & 0 & \cos\theta \end{bmatrix} \begin{bmatrix} 1 & 0 & 0 \\ 0 & \cos\phi & -\sin\phi \\ 0 & \sin\phi & \cos\phi \end{bmatrix}$$
 \begin{equation} R_b^G = \begin{bmatrix}   c_\psi c_\theta &  c_\psi s_\theta s_\phi -  s_\psi c_\phi &  c_\psi s_\theta c_\phi +  s_\psi s_\phi \\  s_\psi c_\theta &  s_\psi s_\theta s_\phi +  c_\psi c_\phi &  s_\psi s_\theta c_\phi -  c_\psi s_\phi \\ - s_\theta &  c_\theta s_\phi &  c_\theta c_\phi  
 \end{bmatrix}
@@ -395,106 +370,107 @@ The equations of motion are defined in the 'inertial' global reference frame. Us
     \label{fig:TikzRotors}
 \end{figure}
 
-\begin{center}
-\large
-  \ul{$\mathbf{\sum F = ma}$}
-\end{center}
+
+\noindent\ul{$\mathbf{\sum F = ma|}:$}
 
 
-$$F_g+F_T^G+F_d = m\ddot{X}^G$$
-Where $\ddot{X}^G$ is the second derivative of the X,Y,Z position vector in the global frame. $F_g$ only acts along the Global Z-axis:
 
-\noindent\textbf{ \ul{Force of Gravity}}
+$$m\ddot{X}^G = F_g+F_d+F_T^G $$
 
-$$F_g = \begin{bmatrix}
+Where $\ddot{X}^G$ is the second derivative of the X,Y,Z position vector in the global frame. \\
+
+\noindent\textbf{ \ul{Force of Gravity In Global Frame|}:}\vspace{0.2cm}\\
+In the global frame, gravity is always pointed down, this is aligned with the z axis in the NED convention, and therefore, the gravity vector in the global frame can be defined:
+$$\boxed{F_g = \begin{bmatrix}
 0\\0\\mg
-\end{bmatrix}$$
+\end{bmatrix}}$$
 
-\noindent\textbf{ \ul{Drag Force}}
+\noindent\textbf{ \ul{Drag Force|}:}\vspace{0.2cm}\\
+\noindent Since the environment is assumed to have no wind (for now), the drag force modeled here is essentially a pure resistance to motion (a dampening term). Here, we will use a simplified model of drag that treats drag as proportionally linear to velocity in the global frame. The coefficients of drag, however, will be specific to the geometry of the quadrotor, and therefore, it's orientation. Because of this it is necessary to first translate the velocities in the global frame to the body frame. Using Equation [\ref{eq:R_b^G}] $R_b^G$, where it can be shown that $R_G^b = [R_b^b]^T$ (true for any true rotational matrix) and therefore: $$\begin{bmatrix} \dot{x}_b\\\dot{y}_b\\\dot{z}_b\end{bmatrix}=R_G^b\begin{bmatrix} \dot{X}^G\\\dot{Y}^G\\\dot{Z}^G\end{bmatrix} = [R_b^G]^T \begin{bmatrix}\dot{X}^G\\\dot{Y}^G\\\dot{Z}^G \end{bmatrix}$$ 
 
-Since the environment is assumed to have no wind (for now), the drag force modeled here is essentially a pure resistance to motion (a dampening term). Here, we will use a simplified model of drag that treats drag as proportionally linear to velocity in the global frame. The coefficients of drag, however, will be specific to the geometry of the quadrotor, and therefore, it's orientation. Because of this it is necessary to first translate the velocities in the global frame to the body frame. Earlier, $R_b^G$ was drived. It can be shown that $R_G^b = [R_b^b]^T$ and therefore: $$\begin{bmatrix} \dot{x}_b\\\dot{y}_b\\\dot{z}_b\end{bmatrix}=R_G^b\begin{bmatrix} \dot{X}^G\\\dot{Y}^G\\\dot{Z}^G\end{bmatrix} = [R_b^G]^T \begin{bmatrix}\dot{X}^G\\\dot{Y}^G\\\dot{Z}^G \end{bmatrix}$$). 
-
-$$F_d = $$
-
-Here, we will use a simplified model of drag which treats drag as proportionally linear to velocity in each of the global frames. This model uses three coefficients for drag: $K_{d,x},\;K_{d,y},\; \text{and}\;K_{d,z}$. A more complex analysis would model the drag force in the body frame, and might be added to this analysis later. Using these constants to relate velocity in the global frame to drag force in the global frame: 
-$$F_d = \begin{bmatrix}
+\noindent As mentioned, the drag force depends on geometries in the body frame, and, is modeled proportionally linear with respect to velocity. Using the expression above for velocity in the body frame, and $K_{d,x},\,K_{d,y},\,\text{and }K_{d,z}$ represent the coefficient of drag for the x,y, and z axis of the body frame:
+$$F_d^b =\begin{bmatrix}
     K_{d,x}&0&0\\0&K_{d,y}&0\\0&0&K_{d,z}
-\end{bmatrix}
-\begin{bmatrix}
-    \dot{X}^G\\\dot{Y}^G\\\dot{Z}^G
-\end{bmatrix}$$
-In the Body frame, the thrust vector acts only in the $-z_b$ direction,additionally, as discussed previously, for each (i) motor, the magnitude of the thrust generated is modeled as $F_i = K_T\cdot\omega_i^2$ where $K_T$ is the coefficient of thrust (constant for each motor). This gives us:
-$$F_T^b = \sum^4_{i=1} Fi = \begin{bmatrix}
-    0\\0\\K_T\sum^4_{i=1}\omega_i^2
-\end{bmatrix}$$
-Using equation (\ref{eq:R_b^G}) for $R_b^G$ we can rotate these forces in the body frame into forces in the global frame:
-$$F_T^G = R_b^G\cdot F_T^b =R_b^G\begin{bmatrix}
-    0\\0\\K_T\sum^4_{i=1}\omega_i^2
+\end{bmatrix}[R_b^G]^T \begin{bmatrix}\dot{X}^G\\\dot{Y}^G\\\dot{Z}^G \end{bmatrix} $$
+\noindent Or:
+$$F_d^b =K_d[R_b^G]^T \begin{bmatrix}\dot{X}^G\\\dot{Y}^G\\\dot{Z}^G \end{bmatrix} $$
+\noindent Where $K_d$ is defined:
+\begin{equation} K_d =\begin{bmatrix}
+    K_{d,x}&0&0\\0&K_{d,y}&0\\0&0&K_{d,z}
+\end{bmatrix}\label{eq:K_d}
+\end{equation}\\
+\\\noindent Converting these forces back into the global frame, for the final equation of the drag force vector in the global frame. 
+\begin{equation*}
+    \boxed{F_d^G =\,R_b^G\cdot K_d\cdot[R_b^G]^T \cdot \begin{bmatrix}\dot{X}^G\\\dot{Y}^G\\\dot{Z}^G \end{bmatrix}}
+    \label{eq:F_d^G}
+\end{equation*}
+
+\noindent\textbf{ \ul{Thrust Force|}:}\vspace{0.22 cm}\\
+In the Body frame, the thrust vector acts only in the $-z_b$ direction, as shown in Figure [\ref{fig:TikzRotors}] additionally, as discussed previously, for each (i) motor, the magnitude of the thrust generated is modeled as $F_i = K_T\cdot\omega_i^2$ where $K_T$ is the coefficient of thrust (constant for each motor). Therefore, the total thrust Force (T) can be defined as the sum of the individual thrusts of each motor. \begin{equation}
+    T=\sum^4_{i=1}F_i = \sum^4_{i=1}K_{T,i}\,\cdot\omega_i^2 = K_{T_1}\omega^2_1+K_{T_2}\omega^2_2+K_{T_3}\omega^2_3+K_{T_4}\omega^2_4
+    \label{eq:T}
+\end{equation}
+This gives us:
+$$F_T^b  = -\begin{bmatrix}
+    0\\0\\T
+\end{bmatrix} =T\begin{bmatrix}
+    0\\0\\1
+\end{bmatrix}  $$
+Using equation (\ref{eq:R_b^G}) for $R_b^G$ we can rotate the thrust force in the body frame into forces in the global frame:
+
+\begin{equation*}
+    \boxed{F_T^G =-T\,R_b^G\begin{bmatrix}
+    0\\0\\1
+\end{bmatrix}}
+\label{eq:F_T^G}
+\end{equation*} 
+
+
+\noindent\textbf{\ul{Summing the Gravity, Drag, and Thrust forces|}:}
+$$m\ddot{X}^G = F_g+F_d+F_T^G $$
+$$m\ddot{X}^G = \begin{bmatrix}
+0\\0\\mg
+\end{bmatrix}-\,R_b^G\, K_d\,[R_b^G]^T \begin{bmatrix}\dot{X}^G\\\dot{Y}^G\\\dot{Z}^G \end{bmatrix}-TR_b^G\begin{bmatrix}
+    0\\0\\1
 \end{bmatrix} $$
-$$F_T^G =  \begin{bmatrix}   c_\psi c_\theta &  c_\psi s_\theta s_\phi -  s_\psi c_\phi &  c_\psi s_\theta c_\phi +  s_\psi s_\phi \\  s_\psi c_\theta &  s_\psi s_\theta s_\phi +  c_\psi c_\phi &  s_\psi s_\theta c_\phi -  c_\psi s_\phi \\ - s_\theta &  c_\theta s_\phi &  c_\theta c_\phi  
-\end{bmatrix} \begin{bmatrix}
-    0\\0\\K_T\sum^4_{i=1}\omega_i^2
-\end{bmatrix}$$
-
-\textbf{Summing the Gravity, Drag, and Thrust forces} 
-$$m\begin{bmatrix}
-    \ddot{X}^G\\\ddot{Y}^G\\\ddot{Z}^G
-\end{bmatrix} = \begin{bmatrix}
-0\\0\\mg
-\end{bmatrix}+\begin{bmatrix}
-    K_{d,x}&0&0\\0&K_{d,y}&0\\0&0&K_{d,z}
-\end{bmatrix}
-\begin{bmatrix}
-    \dot{X}^G\\\dot{Y}^G\\\dot{Z}^G
-\end{bmatrix} +\begin{bmatrix}   c_\psi c_\theta &  c_\psi s_\theta s_\phi -  s_\psi c_\phi &  c_\psi s_\theta c_\phi +  s_\psi s_\phi \\  s_\psi c_\theta &  s_\psi s_\theta s_\phi +  c_\psi c_\phi &  s_\psi s_\theta c_\phi -  c_\psi s_\phi \\ - s_\theta &  c_\theta s_\phi &  c_\theta c_\phi  
-\end{bmatrix} \begin{bmatrix}
-    0\\0\\K_T\sum^4_{i=1}\omega_i^2
-\end{bmatrix}$$
-\textbf{Dividing mass to determine acceleration in the body frame:}
-$$\begin{bmatrix}
-    \ddot{X}^G\\\ddot{Y}^G\\\ddot{Z}^G
-\end{bmatrix} = \begin{bmatrix}
+\textbf{\ul{Dividing mass to determine acceleration in the body frame|}:}
+\begin{equation}\boxed{\ddot{X}^G = \begin{bmatrix}
 0\\0\\g
-\end{bmatrix}+\begin{bmatrix}
-    \frac{K_{d,x}}{m}&0&0\\0&\frac{K_{d,y}}{m}&0\\0&0&\frac{K_{d,z}}{m}
-\end{bmatrix}
-\begin{bmatrix}
-    \dot{X}^G\\\dot{Y}^G\\\dot{Z}^G
-\end{bmatrix} +\begin{bmatrix}   c_\psi c_\theta &  c_\psi s_\theta s_\phi -  s_\psi c_\phi &  c_\psi s_\theta c_\phi +  s_\psi s_\phi \\  s_\psi c_\theta &  s_\psi s_\theta s_\phi +  c_\psi c_\phi &  s_\psi s_\theta c_\phi -  c_\psi s_\phi \\ - s_\theta &  c_\theta s_\phi &  c_\theta c_\phi  
-\end{bmatrix} \begin{bmatrix}
-    0\\0\\\frac{K_T}{m}\sum^4_{i=1}\omega_i^2
-\end{bmatrix}$$
-\subsection{Rotational Dynamics}
-Using Newtons second for rotational motion:
-$$\sum\tau = I\alpha =I\dot{\omega} $$
-For this analysis, there are three relevant torques to consider:
-\begin{itemize}
-    \item $\tau_m$, this is the torque generated by different amounts of thrust applied by each motor. These are the control inputs over the attitude of the vehicle. 
-    \item $\tau_g$, is the gyroscopic torque created by spinning the propellers and motors at high speeds. 
-    \item Gyroscopic Cross Coupling term, this term ($\omega\times I_b\omega$) quantifies the torque created by a net torque around a body on an axis other than the one it is currently spinning about. The resulting torque is perpendicular to both the original net torque axis aswell as the axis of rotation. 
-\end{itemize}
-Putting these terms together we get:
-$$I_b\dot{\omega} = \tau_m+\tau_g-(\omega\times I_b\omega)$$
+\end{bmatrix}-\frac{1}{m}\,R_b^G\, K_d\,[R_b^G]^T \begin{bmatrix}\dot{X}^G\\\dot{Y}^G\\\dot{Z}^G \end{bmatrix}-\frac{T}{m}R_b^G\begin{bmatrix}
+    0\\0\\1
+\end{bmatrix}}\label{eq:ddotX^G}\end{equation}
 
+\subsection{Rotational Dynamics}
 Given that the mass is assumed to be distributed symmetrically about the principal axis, and, the products of inertia are also assumed to be zero, the Inertia tensor in the body frame is defined as follows:
 $$I_b = \begin{bmatrix}
     I_x&0&0\\0&I_y&0\\0&0&I_z
 \end{bmatrix}$$
-Expanding the Cross Coupling term discussed earlier:
-\begin{align*}\omega\times I_b\omega &= \begin{bmatrix}
-    \dot{\phi}\\\dot{\theta}\\\dot{\psi}
-\end{bmatrix} \times \begin{bmatrix}
-    I_x&0&0\\0&I_y&0\\0&0&I_z
-\end{bmatrix}\begin{bmatrix}
-    \dot{\phi}\\\dot{\theta}\\\dot{\psi}
-\end{bmatrix}
-\end{align*}
-\subsubsection{Propeller and Motor Torques}
-The torque about the motors can be defined as:
-$$I_m \dot{\omega} = \tau_m - \tau_{\psi}$$
-Where $\tau_\psi$ is the torque about the z axis as a result of propeller drag about the z axis of the quadrotor (the z axis of each propeller is assumed parallel to the z axis of the body frame). At hover there will be no net torque about the motors and:
-$$\tau_m = \tau_{\psi}$$
-As discussed earlier, the drag created by each propeller is modeled by the following equation:
+As the physical design continues to be finalized, the model may be updated and tuned to our specific geometries, however, we have made certain design considerations such that the center of mass can be tuned with respect to the sensors, as well as the motors. 
+\subsubsection{Transport Theorem}
+Using Newtons second for rotational motion, the net torque on a body equals the rate of change angular momentum ($\frac{dH}{dt}$).
+$$\sum\tau =\left(\frac{dH}{dt}\right)_{inertial}  = \left(\frac{d(I\omega)}{dt}\right)_{inertial} $$
+This, however is only true when viewed from an inertial frame. In this analysis, we will consider the vehicles Euler angles and body rotational rates as states. These are measured in the body frame, and therefore, the equation above doesn't apply. The Transport Theorem (also referred to as the Coriolis or rate-of-change transport theorem) describes how two reference frames which are rotating with respect to each other observe the same rate of change.
+$$\left( \frac{d\mathbf{r}}{dt} \right)_{\text{inertial}} = \left( \frac{d\mathbf{r}}{dt} \right)_{body} + \boldsymbol{\omega}_{body/\text{inertial}} \times \mathbf{r}$$
+In our case, relating the rate of change of the angular momentum of our vehicle in it's body frame to the global frame. 
+$$\left(\frac{d(I\omega)}{dt}\right)_{G} = \left(\frac{d(I\omega)}{dt}\right)_b + \omega \times (I_b\omega)$$
+Substituting this expression into the expression for net torque:
+$$\sum\tau = \left(\frac{d(I_b\omega)}{dt}\right) + \omega \times (I_b\omega)$$
+Applying the product rule:
+$$\sum\tau = \left(\frac{d\,I_b}{dt}\right)\omega + \left(\frac{d\,\omega}{dt}\right)I_b + \omega \times (I_b\omega)$$
+Given the vehicle is being modeled as a rigid body, the inertia in the body frame is constant with respect to time and therefore:
+$$\sum\tau =  \dot{\omega}\,I_b + \omega \times (I_b\omega)$$
+Rearranging, to get \ul{Euler's rotation equation}: 
+$$I_b\,\dot{\omega}=   \sum\tau + (\omega \times I_b\omega)$$
+\subsection{Net Torque}
+Besides the Coriolis torque discussed in the previous section, there are two torques of interest. 
+\begin{itemize}
+    \item $\tau_{mot,i}$, this is the torque generated by different amounts of thrust applied by each motor. These are the control inputs over the attitude of the vehicle. 
+    \item $\tau_g$, is the gyroscopic torque, generated by the inertial properties of spinning propellers and motors with mass. They "want" to continue spinning about their axis of rotation, and, when the body is spinning about a different axis, they resist this change and generate a torque.
+\end{itemize}
+
+\noindent\textbf{ \ul{Motor Torques|}:}\vspace{0.22 cm}\\The torque about the motors can be defined as:
+$$I_m \dot{\omega} = \tau_{mot,i} - \tau_{\psi}$$
+Where $\tau_\psi$ is the torque about the z axis as a result of propeller drag about the z axis of the quadrotor (the z axis of each propeller is assumed parallel to the z axis of the body frame).As discussed earlier, the drag created by each propeller is modeled by the following equation:
 $$\tau_{D,i} = K_D\omega^2$$
 $K_D$ here comes from the standard formulation of aerodynamic drag, multiplied by $R^2$ to be converted from a force to a torque. 
 $$K_d = \frac{1}{2} \rho C_D A R^3$$
@@ -502,7 +478,7 @@ Summing the drag torque for each propeller:
 $$\tau_\psi = \tau_{D} =\sum\tau_{D,i} = K_D(\omega_1^2+\omega_2^2+\omega_3^2+\omega_4^2)$$
 Here, we can see that we'll have an issue where the rotation of each motor sums to a positive torque about the $z_b$ axis. This would make achieving equilibrium in flight impossible. To account for this two of the motors will be spun in the opposite direction, creating a drag torque in the opposite direction (as shown in Figure \ref{fig:TikzRotors}):
  $$\tau_\psi = \tau_{D} =\sum\tau_{D,i} = K_D(\omega_1^2-\omega_2^2+\omega_3^2-\omega_4^2)$$
- The torque about the x and y axis are governed by the thrust of each motor and the geometry of the quadrotor as shown in Figure \ref{fig:Geometries}:
+ The torque about the x and y axis are governed by the thrust of each motor and the geometry of the quadrotor ($\tau = r\cdot F$)\, as shown in Figure \ref{fig:Geometries}:
  \begin{figure}[H]
      \centering
      \begin{tikzpicture}[scale = 1.3]
@@ -555,6 +531,7 @@ Here, we can see that we'll have an issue where the rotation of each motor sums 
      \label{fig:Geometries}
  \end{figure}
 
+\noindent 
 The torque about these axis can be calculated as following: 
 $$\tau_\theta =  L_{F,x}K_T\,\left(\omega_4^2+\omega^2_3-\omega^2_2-\omega^2_1\right)$$
 $$\tau_\phi  = L_{F,y}K_T\,\left(\omega_3^2+\omega^2_2-\omega^2_4-\omega^2_1\right)$$
