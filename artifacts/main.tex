@@ -92,17 +92,83 @@ From Wilselby:
 
 %Relating Coordinate Frames
 \subsection{Coordinate Frames}
-
-%
-\subsubsection{$R_b^G$ Rotational Matrix}
-The place I'm choosing to start here is just from a simple drawing of the situation we're dealing with. We have a world frame in which inertial forces are felt and acted in, in relation to that we have the body frame of the quadrotor. The world frame is the standard North East Down (corresponding to xyz respectively), where the body frame is "attatched" to the quadrotors center of mass, and, it's orientation is "attatched" to the orientation of the quadrotor. Given that the Vehicle we're modeling will have a camera on the "front" of it, we will chose that direction to be the x direction. A very simple drawing of these coordinate frames and their relation to one another can be seen below in Figure 
-\ref{fig:GBF}  
+{When designing a kinematic model of a system, one of the first considerations that must be made is the coordinate systems of interest. Every vector will act within one of these frames and with respect to them. The system we're designing for will receive positional information from IMUs (Internal Motion Unit). These units produce readings of acceleration and gyration with respect to axes that are attached to the body of the quadrotor. Additionally, an inertial frame is necessary so that the forces acting on the body can be converted into actual flight dynamics, with states that are in reference to a physical location in a "task space". } 
+\subsubsection{Defining Coordinate Frames}
+The first step I will take is to draw a simple diagram of the quadrotor in the task space, drawing on it two relevant frames, this can be seen in Figure [\ref{fig:GBF}].
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\linewidth]{GBF.png}
     \caption{Relevant Frames and Parameters}
+    \includegraphics[width=0.8\linewidth]{GBF.png}
     \label{fig:GBF}
 \end{figure}
+\begin{itemize}
+    \item body frame \{b\} ($x_b,y_b,z_b$): This frame is attached to the drone, it rotates and translates along with the $\text{rigid}^*$ body of the quadrotor. This frame is the frame in which all sensor measurements will be made.
+    \item Global Frame \{G\} ($X^G,Y^G,Z^G$): this frame is the $\text{inertial}^*$ frame which allows for use of Newtons 2nd Law. Choosing North East and Down to be the X,Y, and Z axis respectively as it is a pretty standard notation for drones and other aircraft. 
+\end{itemize}
+As you can see in Figure [\ref{fig:GBF}], the position of the vehicle can be measured with respect to the Global Frame using position vectors. How though should the orientation of the vehicle be related to that of the Global Frame? 
+
+\subsubsection{Coordinate Frame Transformations}
+We need to be able to transform vectors between these two frames, given that all of our control inputs and sensor information take place in the body frame. Generally there are two methods used to achieve this, Euler angles and Quaternions.
+\begin{center}
+\large
+    \textbf{\ul{Euler Angles}}
+\end{center}
+ Euler angles describe the transformation frome one frame to another as a series of rotations about its axes. A typically used sequence in Aerospace and Robotics applications is the Z-Y-X (yaw, pitch, roll)(3,2,1) sequence.
+When using this sequence to transform from the body frame\{b\} to the global frame\{G\}, we first rotate about the $z_b$ axis by angle $\psi$, and arrive at the first intermediate frame \{b'\} with axes ($x_b'\;,y_b'\,,z_b'$). Then, we rotate about $y_b'$ by angle $\theta$ (pitching the vehicle), arriving at the second intermediate frame  \{b''\} with axes ($x_b''\;,y_b''\,,z_b''$). Finally rotating about the $x'_b$ axis by angle $\phi$ (roll), and arrive at Frame \{G\}. These steps are visualized below, and are valid for any transformation between axis.
+\begin{center}
+    \begin{tikzpicture}
+        \draw [blue!60!black][-Stealth](0,0,0) -- (0,0,2) node [left]{$z_b,z'_b$};
+        \draw [blue!60!black][-Stealth](0,0,0) -- (0,2,0) node [above]{$y_b$};
+        \draw [blue!60!black][-Stealth](0,0,0) -- (2,0,0) node [right]{$x_b$};
+
+        \draw [green!60!black][-Stealth](0,0,0) -- (1.88,-0.68,0) node [right]{$x'_b$};
+        \draw [green!60!black][-Stealth](0,0,0) -- (0.68,1.88,0) node [above]{$y'_b$};
+        \draw [green!60!black][-Stealth](0,0,0) -- (0,0,2) ;
+        \draw [green!60!black, ->] (1.2,0,0) arc (0:-20:1.2) node [midway, right=2pt] {$\psi$};
+    \end{tikzpicture}
+    \begin{tikzpicture}
+        \draw [green!60!black][-Stealth](0,0,0) -- (1.88,-0.68,0) node [right]{$x'_b$};
+        \draw [green!60!black][-Stealth](0,0,0) -- (0.68,1.88,0) node [above]{$y'_b,\,y''_b$};
+        \draw [green!60!black][-Stealth](0,0,0) -- (0,0,2) node [left]{$z_b$};
+        
+        \draw [red!60!black][-Stealth](0,0,0) -- (1.6,-0.6,1) node [right]{$x'_b$};
+        \draw [red!60!black][-Stealth](0,0,0) -- (0.68,1.88,0) ;
+        \draw [red!60!black][-Stealth](0,0,0) -- (-0.93,0.34,1.73)node [left]{$z'_b$} ;
+        
+        \draw [red!70!black, ->] (.9,-0.35,0) arc (0:-30:0.5) node [midway, right=2pt] {\small$\theta$};
+    \end{tikzpicture}
+    \begin{tikzpicture}
+        \draw [red!60!black][-Stealth](0,0,0) -- (1.6,-0.6,1) node [right]{$x''_b,\,X^G$};
+        \draw [red!60!black][-Stealth](0,0,0) -- (0.68,1.88,0) node [right]{$y''_b$};
+        \draw [red!60!black][-Stealth](0,0,0) -- (-0.93,0.34,1.73)node [left]{$z''_b$} ;
+        
+        \draw [black,thick][-Stealth](0,0,0) -- (1.6,-0.6,1) ;
+        \draw [black,thick][-Stealth](0,0,0) -- (1.062,1.457,-0.866) node [right]{$Y^G$};
+        \draw [black,thick][-Stealth](0,0,0) -- (-0.472,1.236,1.5)node [left]{$Z^G$} ;
+        
+        \draw [ ->] (-0.24,0.6,0.75) arc (0:-30:0.8) node [midway, left=2pt] {\small$\phi$};
+    \end{tikzpicture}
+\end{center}
+These rotations can be described with trigonometric functions, for example, from frame $b \xrightarrow{} b'$:
+\begin{align*}
+    x'_b &=\cos(\psi)x_b-sin(\psi)y_b\\
+    y'_b &=  \sin(\psi)x_b +\cos(\psi)\,y_b \\
+    z'_b &= z_b
+\end{align*}
+In  Matrix Form this becomes:
+$$\begin{bmatrix}
+    x'_b\\y'_b\\z'_b
+\end{bmatrix} = 
+\begin{bmatrix}
+    \cos(\psi) & -\sin(\psi) & 0\\
+    \sin(\psi) & \cos(psi) & 0\\
+    0 & 0& 1
+\end{bmatrix}\begin{bmatrix}
+    x_b\\y_b\\z_b
+\end{bmatrix}$$
+\subsubsection{$R_b^G$ Rotational Matrix}
+The place I'm choosing to start here is just from a simple drawing of the situation we're dealing with. We have a world frame in which inertial forces are felt and acted in, in relation to that we have the body frame of the quadrotor. The world frame is the standard North East Down (corresponding to xyz respectively), where the body frame is "attatched" to the quadrotors center of mass, and, it's orientation is "attatched" to the orientation of the quadrotor. Given that the Vehicle we're modeling will have a camera on the "front" of it, we will chose that direction to be the x direction. A very simple drawing of these coordinate frames and their relation to one another can be seen below in Figure 
+
 \noindent These frames produce the following parameters. Note that the body roll rates (pqr) aren't shown, but, are the first derivatives of roll pitch and yaw respectively. 
 \small
     \begin{align*}
@@ -278,7 +344,7 @@ The equations of motion are defined in the 'inertial' global reference frame. Us
   % z^b axis (pointing downwards)
   \draw[dashed, ->] (O) -- (0, -3) node[below] {$z^b$};
   \draw[dashed, ->] (O) -- (2, 2) node[below] {$x^b$};
-  \draw[dashed, ->] (O) -- (-1.8, 0.1) node[below] {$y^b$};
+  \draw[dashed, ->] (O) -- (3.6, -0.2) node[below] {$y^b$};
 
   % Motor Hubs (Filled Rounded Rectangles/Nodes)
   \foreach \m in {M1, M2, M3, M4} {
@@ -329,13 +395,27 @@ The equations of motion are defined in the 'inertial' global reference frame. Us
     \label{fig:TikzRotors}
 \end{figure}
 
-\textbf{Newtons Second:}
-$$\sum F = ma$$
+\begin{center}
+\large
+  \ul{$\mathbf{\sum F = ma}$}
+\end{center}
+
+
 $$F_g+F_T^G+F_d = m\ddot{X}^G$$
 Where $\ddot{X}^G$ is the second derivative of the X,Y,Z position vector in the global frame. $F_g$ only acts along the Global Z-axis:
+
+\noindent\textbf{ \ul{Force of Gravity}}
+
 $$F_g = \begin{bmatrix}
 0\\0\\mg
 \end{bmatrix}$$
+
+\noindent\textbf{ \ul{Drag Force}}
+
+Since the environment is assumed to have no wind (for now), the drag force modeled here is essentially a pure resistance to motion (a dampening term). Here, we will use a simplified model of drag that treats drag as proportionally linear to velocity in the global frame. The coefficients of drag, however, will be specific to the geometry of the quadrotor, and therefore, it's orientation. Because of this it is necessary to first translate the velocities in the global frame to the body frame. Earlier, $R_b^G$ was drived. It can be shown that $R_G^b = [R_b^b]^T$ and therefore: $$\begin{bmatrix} \dot{x}_b\\\dot{y}_b\\\dot{z}_b\end{bmatrix}=R_G^b\begin{bmatrix} \dot{X}^G\\\dot{Y}^G\\\dot{Z}^G\end{bmatrix} = [R_b^G]^T \begin{bmatrix}\dot{X}^G\\\dot{Y}^G\\\dot{Z}^G \end{bmatrix}$$). 
+
+$$F_d = $$
+
 Here, we will use a simplified model of drag which treats drag as proportionally linear to velocity in each of the global frames. This model uses three coefficients for drag: $K_{d,x},\;K_{d,y},\; \text{and}\;K_{d,z}$. A more complex analysis would model the drag force in the body frame, and might be added to this analysis later. Using these constants to relate velocity in the global frame to drag force in the global frame: 
 $$F_d = \begin{bmatrix}
     K_{d,x}&0&0\\0&K_{d,y}&0\\0&0&K_{d,z}
@@ -575,14 +655,14 @@ The derivatives of these states have been defined in the previous sections, and,
     \ddot{X}^G\\\ddot{Y}^G\\\ddot{Z}^G
 \end{bmatrix} &= \begin{bmatrix}
 0\\0\\g
-\end{bmatrix}+\underbrace{\begin{bmatrix}
+\end{bmatrix}-\underbrace{\begin{bmatrix}
     \frac{K_{d,x}}{m}&0&0\\0&\frac{K_{d,y}}{m}&0\\0&0&\frac{K_{d,z}}{m}
 \end{bmatrix}}_{\text{Body Drag Coeff. Matrix}}
 \begin{bmatrix}
     \dot{X}^G\\\dot{Y}^G\\\dot{Z}^G
 \end{bmatrix} +\underbrace{\begin{bmatrix}   c_\psi c_\theta &  c_\psi s_\theta s_\phi -  s_\psi c_\phi &  c_\psi s_\theta c_\phi +  s_\psi s_\phi \\  s_\psi c_\theta &  s_\psi s_\theta s_\phi +  c_\psi c_\phi &  s_\psi s_\theta c_\phi -  c_\psi s_\phi \\ - s_\theta &  c_\theta s_\phi &  c_\theta c_\phi  
 \end{bmatrix}}_{R_b^G} \underbrace{\begin{bmatrix}
-    0\\0\\\frac{K_T}{m}\sum^4_{i=1}\omega_i^2
+    0\\0\\\frac{-1}{m}\left(K_{T_1}\omega_1^2+K_{T_2}\omega^2_2+K_{T_3}\omega^2_3 + K_{T_4}\omega_4^2\right)
 \end{bmatrix}}_{\text{Motor Control Force}}\\\\
 \begin{bmatrix} \dot{\phi} \\ \dot{\theta} \\ \dot{\psi} \end{bmatrix} &= \begin{bmatrix} 1 & \sin\phi\tan\theta & \cos\phi\tan\theta \\ 0 & \cos\phi & -\sin\phi \\ 0 & \frac{\sin\phi}{\cos\theta} & \frac{\cos\phi}{\cos\theta} \end{bmatrix}\begin{bmatrix} p \\ q \\ r \end{bmatrix}\\\\
 \begin{bmatrix}
@@ -595,9 +675,11 @@ The derivatives of these states have been defined in the previous sections, and,
 0\\
 0\\
 I_r \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}
-\end{array}\right]}_{\text{Gyroscopic Precession from Propellers}}-\underbrace{\begin{bmatrix}
+\end{array}\right]}_{\text{Gyroscopic Precession from Propellers}}-\underbrace{
+\begin{bmatrix}
     \dot{\phi}\\\dot{\theta}\\\dot{\psi}
-\end{bmatrix} \times \begin{bmatrix}
+\end{bmatrix}
+\times \begin{bmatrix}
     I_x&0&0\\0&I_y&0\\0&0&I_z
 \end{bmatrix}\begin{bmatrix}
     \dot{\phi}\\\dot{\theta}\\\dot{\psi}
@@ -606,7 +688,29 @@ I_r \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}
     \frac{L_{F,x}}{I_y}\,\left(K_{T_1}\omega_4^2+K_{T_1}\omega^2_3-K_{T_1}\omega^2_2-K_{T_1}\omega^2_1\right)\\
     \frac{1}{I_z}(K_{D_1}\omega_1^2-K_{D_2}\omega_2^2+K_{D_3}\omega_3^2-K_{D_4}\omega_4^2)
 \end{bmatrix}}_{\text{Motor Control Torques}}
-\end{align*}}
+\end{align*}
+\begin{align*}
+\begin{bmatrix}\dot X^G\\\dot Y^G\\\dot Z^G\end{bmatrix} &= \begin{bmatrix}V_X\\V_Y\\V_Z\end{bmatrix}\\[6pt]
+\begin{bmatrix}\dot V_X\\\dot V_Y\\\dot V_Z\end{bmatrix} &=
+\begin{bmatrix}0\\0\\g\end{bmatrix}
+-\frac{T}{m}\,R_b^G\begin{bmatrix}0\\0\\1\end{bmatrix}
+-\frac{1}{m}\,R_b^G\,\mathrm{diag}(K_{d,x},K_{d,y},K_{d,z})\,(R_b^G)^{\!\top}\begin{bmatrix}V_X\\V_Y\\V_Z\end{bmatrix}\\[6pt]
+\begin{bmatrix}\dot\phi\\\dot\theta\\\dot\psi\end{bmatrix} &=
+\begin{bmatrix}1&\sin\phi\tan\theta&\cos\phi\tan\theta\\0&\cos\phi&-\sin\phi\\0&\frac{\sin\phi}{\cos\theta}&\frac{\cos\phi}{\cos\theta}\end{bmatrix}
+\begin{bmatrix}p\\q\\r\end{bmatrix}\\[6pt]
+\begin{bmatrix}\dot p\\\dot q\\\dot r\end{bmatrix} &=
+I_b^{-1}\left(
+\underbrace{\boldsymbol\tau}_{\text{motor torques}}
+-\underbrace{\boldsymbol\omega\times I_b\boldsymbol\omega}_{\text{Euler coupling}}
+-\underbrace{\boldsymbol\omega\times\begin{bmatrix}0\\0\\-J_r\Omega_r\end{bmatrix}}_{\text{prop gyroscopic}}
+\right),\quad \boldsymbol\omega=\begin{bmatrix}p\\q\\r\end{bmatrix}\\[6pt]
+\boldsymbol\tau &=
+\begin{bmatrix}
+L_{F,y}\left(K_{T_2}\omega_2^2+K_{T_3}\omega_3^2-K_{T_1}\omega_1^2-K_{T_4}\omega_4^2\right)\\
+L_{F,x}\left(K_{T_3}\omega_3^2+K_{T_4}\omega_4^2-K_{T_1}\omega_1^2-K_{T_2}\omega_2^2\right)\\
+K_{D_1}\omega_1^2-K_{D_2}\omega_2^2+K_{D_3}\omega_3^2-K_{D_4}\omega_4^2
+\end{bmatrix}
+\end{align*}
 \section{drawings}
 \subsection{Top View}
 \begin{center}
