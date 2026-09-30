@@ -460,7 +460,7 @@ $$\sum\tau = \left(\frac{d\,I_b}{dt}\right)\omega + \left(\frac{d\,\omega}{dt}\r
 Given the vehicle is being modeled as a rigid body, the inertia in the body frame is constant with respect to time and therefore:
 $$\sum\tau =  \dot{\omega}\,I_b + \omega \times (I_b\omega)$$
 Rearranging, to get \ul{Euler's rotation equation}: 
-$$I_b\,\dot{\omega}=   \sum\tau + (\omega \times I_b\omega)$$
+$$I_b\,\dot{\omega}=   \sum\tau - (\omega \times I_b\omega)$$
 \subsection{Net Torque}
 Besides the Coriolis torque discussed in the previous section, there are two torques of interest. 
 \begin{itemize}
@@ -550,7 +550,7 @@ $$\boxed{\boldsymbol{\tau}_m = \begin{bmatrix}
     K_D\left(\omega_1^2-\omega_2^2+\omega_3^2-\omega_4^2\right)
 \end{bmatrix}}$$
 Identical motors and propellers are assumed, so a single $K_T$ and $K_D$ apply to all four.
-
+$\tau_\psi = \sum_i s_i\left(K_D\omega_i^2 + I_m\dot\omega_i\right),\qquad s=[+1,-1,+1,-1]$
 
 
 
