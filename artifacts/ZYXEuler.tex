@@ -1,0 +1,99 @@
+% ---------------------------------------------------------------
+% Z-Y-X Euler sequence: {G} -> {b'} -> {b''} -> {b}
+% Needs in the preamble:  \usepackage{tikz}  \usetikzlibrary{arrows.meta}
+% Axis directions are COMPUTED from R_b^G = Rz(psi) Ry(theta) Rx(phi),
+% so the drawing stays consistent with Eq. (R_b^G). Change the three
+% angles below to alter the view (they are exaggerated for clarity).
+% ---------------------------------------------------------------
+
+\newcommand{\eulerdefs}{%
+  % illustration angles (degrees)
+  \pgfmathsetmacro{\psiA}{35}%
+  \pgfmathsetmacro{\thetaA}{25}%
+  \pgfmathsetmacro{\phiA}{30}%
+  \pgfmathsetmacro{\cpsi}{cos(\psiA)}\pgfmathsetmacro{\spsi}{sin(\psiA)}%
+  \pgfmathsetmacro{\cth}{cos(\thetaA)}\pgfmathsetmacro{\sth}{sin(\thetaA)}%
+  \pgfmathsetmacro{\cph}{cos(\phiA)}\pgfmathsetmacro{\sph}{sin(\phiA)}%
+  % frame {b'} = Rz(psi): x' = (xpx,xpy,0), y' = (ypx,ypy,0), z' = Z^G
+  \pgfmathsetmacro{\xpx}{\cpsi}\pgfmathsetmacro{\xpy}{\spsi}%
+  \pgfmathsetmacro{\ypx}{-\spsi}\pgfmathsetmacro{\ypy}{\cpsi}%
+  % frame {b''} = Rz Ry: y'' = y'
+  \pgfmathsetmacro{\xdx}{\cpsi*\cth}\pgfmathsetmacro{\xdy}{\spsi*\cth}%
+  \pgfmathsetmacro{\xdz}{-\sth}%
+  \pgfmathsetmacro{\zdx}{\cpsi*\sth}\pgfmathsetmacro{\zdy}{\spsi*\sth}%
+  \pgfmathsetmacro{\zdz}{\cth}%
+  % frame {b} = Rz Ry Rx (columns of R_b^G); x_b = x''
+  \pgfmathsetmacro{\ybx}{\cpsi*\sth*\sph-\spsi*\cph}%
+  \pgfmathsetmacro{\yby}{\spsi*\sth*\sph+\cpsi*\cph}%
+  \pgfmathsetmacro{\ybz}{\cth*\sph}%
+  \pgfmathsetmacro{\zbx}{\cpsi*\sth*\cph+\spsi*\sph}%
+  \pgfmathsetmacro{\zby}{\spsi*\sth*\cph-\cpsi*\sph}%
+  \pgfmathsetmacro{\zbz}{\cth*\cph}%
+}
+
+% Views: X away from viewer, Y right, Z down (North-East-Down).
+% Panels (a),(b) use eviewa; panel (c) uses eviewb, a slightly different
+% camera angle so that y_b and z_b do not overlap on the page.
+\tikzset{eviewa/.style={x={(0.75cm,0.55cm)}, y={(1.0cm,-0.25cm)}, z={(0cm,-1.1cm)}},
+  eviewb/.style={x={(-0.75cm,0.35cm)}, y={(1.1cm,0.2cm)}, z={(0cm,-1.1cm)}},
+  gax/.style={-{Stealth[length=2.2mm]}, black, thick},
+  pax/.style={-{Stealth[length=2.2mm]}, green!50!black, thick},
+  dax/.style={-{Stealth[length=2.2mm]}, red!70!black, thick},
+  bax/.style={-{Stealth[length=2.2mm]}, blue!70!black, thick}}
+
+\begin{figure}[H]
+\centering
+\begin{minipage}[b]{0.32\linewidth}\centering
+% (a) yaw: {G} -> {b'}, about Z^G
+\begin{tikzpicture}[eviewa]
+  \eulerdefs
+  \draw[gax] (0,0,0) -- (1.6,0,0) node[above left] {$X^G$};
+  \draw[gax] (0,0,0) -- (0,1.6,0) node[right] {$Y^G$};
+  \draw[gax] (0,0,0) -- (0,0,1.6) node[below] {$Z^G,\,z'_b$};
+  \draw[pax] (0,0,0) -- ({1.6*\xpx},{1.6*\xpy},0) node[below left] {$x'_b$};
+  \draw[pax] (0,0,0) -- ({1.6*\ypx},{1.6*\ypy},0) node[above right] {$y'_b$};
+  \draw[->, green!50!black] plot[domain=0:\psiA, samples=20, variable=\ang]
+    ({1.0*cos(\ang)},{1.0*sin(\ang)},0);
+  \node[green!50!black] at ({1.35*cos(\psiA/2)},{1.35*sin(\psiA/2)},0) {$\psi$};
+\end{tikzpicture}
+\\[2pt] {\small (a) Yaw $\psi$ about $Z^G$}
+\end{minipage}\hfill
+\begin{minipage}[b]{0.32\linewidth}\centering
+% (b) pitch: {b'} -> {b''}, about y'_b
+\begin{tikzpicture}[eviewa]
+  \eulerdefs
+  \draw[pax] (0,0,0) -- ({1.6*\xpx},{1.6*\xpy},0) node[below left] {$x'_b$};
+  \draw[pax] (0,0,0) -- (0,0,1.6) node[below] {$z'_b$};
+  \draw[dax] (0,0,0) -- ({1.6*\xdx},{1.6*\xdy},{1.6*\xdz}) node[above] {$x''_b$};
+  \draw[dax] (0,0,0) -- ({1.6*\zdx},{1.6*\zdy},{1.6*\zdz}) node[right] {$z''_b$};
+  \draw[dax] (0,0,0) -- ({1.6*\ypx},{1.6*\ypy},0) node[above right] {$y'_b,\,y''_b$};
+  \draw[->, red!70!black] plot[domain=0:\thetaA, samples=20, variable=\ang]
+    ({1.0*cos(\ang)*\xpx},{1.0*cos(\ang)*\xpy},{-1.0*sin(\ang)});
+  \node[red!70!black] at ({1.35*cos(\thetaA/2)*\xpx},{1.35*cos(\thetaA/2)*\xpy},{-1.35*sin(\thetaA/2)}) {$\theta$};
+\end{tikzpicture}
+\\[2pt] {\small (b) Pitch $\theta$ about $y'_b$}
+\end{minipage}\hfill
+\begin{minipage}[b]{0.32\linewidth}\centering
+% (c) roll: {b''} -> {b}, about x''_b
+\begin{tikzpicture}[eviewb]
+  \eulerdefs
+  \draw[dax] (0,0,0) -- ({1.6*\ypx},{1.6*\ypy},0) node[above right] {$y''_b$};
+  \draw[dax] (0,0,0) -- ({1.6*\zdx},{1.6*\zdy},{1.6*\zdz}) node[right] {$z''_b$};
+  \draw[bax] (0,0,0) -- ({1.6*\xdx},{1.6*\xdy},{1.6*\xdz}) node[above] {$x''_b,\,x_b$};
+  \draw[bax] (0,0,0) -- ({1.6*\ybx},{1.6*\yby},{1.6*\ybz}) node[above right] {$y_b$};
+  \draw[bax] (0,0,0) -- ({1.6*\zbx},{1.6*\zby},{1.6*\zbz}) node[below] {$z_b$};
+  \draw[->, blue!70!black] plot[domain=0:\phiA, samples=20, variable=\ang]
+    ({1.0*(cos(\ang)*\ypx+sin(\ang)*\zdx)},
+     {1.0*(cos(\ang)*\ypy+sin(\ang)*\zdy)},
+     {1.0*(sin(\ang)*\zdz)});
+  \node[blue!70!black] at ({1.35*(cos(\phiA/2)*\ypx+sin(\phiA/2)*\zdx)},
+     {1.35*(cos(\phiA/2)*\ypy+sin(\phiA/2)*\zdy)},
+     {1.35*(sin(\phiA/2)*\zdz)}) {$\phi$};
+\end{tikzpicture}
+\\[2pt] {\small (c) Roll $\phi$ about $x''_b$}
+\end{minipage}
+\caption{Z-Y-X Euler sequence from the global frame $\{G\}$ to the body
+frame $\{b\}$: yaw about $Z^G$, pitch about the intermediate $y'_b$ axis,
+and roll about the final $x''_b$ axis. Angles are exaggerated for clarity.}
+\label{fig:EulerSequence}
+\end{figure}

@@ -1,4 +1,4 @@
-\documentclass[11pt]{article}
+\documentclass[conf]{new-aiaa}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
 \usepackage[utf8]{inputenc}
@@ -28,8 +28,6 @@
 \usepackage{cancel}
 \usepackage{chngcntr}
 \usepackage{makecell}
-\usepackage[authoryear,round]{natbib}
-\usepackage{standalone} 
 \usepackage{tikz}
 \usepackage{newtxtext}
 \usepackage{newtxmath}
@@ -52,31 +50,96 @@
   \end{figure}
 }
 
-\newcommand{\vol}{\text{\reflectbox{\rotatebox[origin=c]{180}{A}}}}
-\renewcommand{\thesection}{\Roman{section}.}
-\renewcommand{\thesubsection}{\thesection\alph{subsection}}
-\renewcommand{\thetable}{\thesubsection\arabic{table}}
-\counterwithin{table}{subsection}
+\newcommand{\vol}
 
 \newcommand{\greencheck}{^{\textcolor{green!70!black}{\checkmark}}}
 \newcommand{\redcancel}[1]{{\color{red}\cancel{\color{black}#1}}}
 
-\title{Simulink Model Of AUUV}
-\author{Oscar Ivy}
-\date{\today}
+
 
 \begin{document}
 
+\title{Development Of Digital Twin for A.Q.U.A.A}
+
+\author{%
+  Oscar A. Ivy\footnote{Undergraduate Student, Aerospace Engineering and Robotics Engineering, 100 Institute Rd.}
+}
+\affil{Worcester Polytechnic Institute, Worcester, MA 01609, USA}
+
 \maketitle
+
+\begin{abstract}
+This paper documents the kinematic, power, and control modeling developed in
+support of a Major Qualifying Project to design, build, and test an amphibious
+quadrotor capable of autonomous aerial flight and underwater propulsion. A
+nonlinear 12-state rigid-body model is coupled with aerodynamic and
+hydrodynamic drag, propeller gyroscopic effects, and a full electrical motor
+model in which duty cycle is the input and motor current and speed are states.
+Sensor models for the Pixhawk inertial measurement unit and the
+Raspberry Pi camera are included, along with a multi-rate control
+architecture in which the IMU drives the fast inner loop and the camera
+provides occasional position updates for line following and pool-edge
+detection. The complete model is implemented in MATLAB/Simulink with the long-term goal of serving as a digital twin
+of the vehicle. The twin is intended to estimate states that are not
+measured directly, to support controller design before flight, and to verify
+component performance through hardware-in-the-loop simulation. Model
+parameters are [identified from bench and pool tests], and the simulated
+response is compared against measured data, yielding [quantitative result].
+The resulting model reduces the cost and risk of experimental testing for the
+team's pool mission and provides a foundation for future amphibious multirotor
+projects.
+\end{abstract}
 \tableofcontents
 \section{Introduction}
-The purpose of this work is to develop a "Digital 
-\section{Quadrotor Dynamics}
+Autonomous aerial and underwater vehicles have traditionally been designed for
+a single operating medium. This specialization limits their adaptability, and
+a vehicle that can fly, submerge, and return to flight could serve search and
+rescue, defense, and industrial inspection roles that no single-medium vehicle
+can fill \cite{2023amphibious,2024amphibious}. The accompanying Major
+Qualifying Project addresses this by building a quadrotor with an H-frame
+structure and a waterproof PVC enclosure, controlled by a Pixhawk flight
+controller with a camera and sensor array. Its mission is to take off from dry
+ground, hover over an indoor pool, land on the water, submerge at least three
+feet, travel 20 feet underwater, resurface, and return to its starting point.
 
+Building and tuning such a vehicle purely by experiment is costly and risky.
+The project had a small team, a limited budget, and a fixed schedule, and a
+failed test can damage hardware or flood the electronics. A validated
+mathematical model lets the team evaluate design choices, such as motor and
+propeller selection, battery capacity, and controller gains, before committing
+to hardware. This is especially valuable for an amphibious vehicle, where the
+physics of the two media differ substantially. Water increases the effective
+mass and inertia of the vehicle through added-mass effects, introduces strong
+quadratic drag and buoyancy forces, and changes propeller thrust and torque
+characteristics and the electrical load on the motors.
 
-%Introduction to quadrotor Dynamics
-{\tiny
-"The quadrotor vehicle operates on the concept of variable torques and thrusts. Each rotor consists of a brushless DC motor and rotor with a fixed pitch. The motors are arranged in pairs along the horizontal and vertical axes with the forward pair rotating clockwise and the horizontal pair rotating counter-clockwise. This design results in the reaction torques from the pairs of motors being exactly opposed by each other if they are all spinning at the same speed. The elimination of the rotating moment allows the vehicle to maintain a constant heading while hovering. Yaw is controlled by varying the speeds of the pairs of motors to create a non-zero net counter torque. Altitude is controlled by varying the thrust from each motor by equal amounts to provide a net thrust vector and without a rotational moment. To move in the lateral directions, the relative speeds of each motor in the lateral pair are varied to create a desired lateral thrust offset. The simple design results in small platforms which are battery operated, able to perform a stable hover, and safe to use in indoor environments. The quadrotor is classified as an under-actuated system. While the quadrotor can move in 6 degrees of freedom (3 translational and 3 rotational), there are only 4 inputs that can be controlled (the speeds of the 4 motors). As will be shown below, the rotational and translational dynamics are coupled which presents an interesting control problem" -Wilselby (rephrase for our design) }
+This paper presents the modeling work carried out in support of the project and
+organized around the digital twin concept. The model comprises four
+coupled parts: (1) a nonlinear 12-state rigid-body dynamics model, (2) a motor
+and propeller model that includes electrical dynamics, (3) sensor models for
+the inertial and vision measurements, and (4) a multi-rate control system that
+includes mission logic for line following and surface detection. The model is
+implemented entirely in Simulink so that the plant, sensors, and controller can
+run at their real sample rates, matching the hardware split between the
+Pixhawk, which handles the IMU and motor control, and the Raspberry Pi, which
+samples the camera.
+
+The goals of the model are threefold. First, it supports design and controller
+development ahead of fabrication and flight testing. Second, it provides
+estimates of states that are not directly measured by the onboard sensors.
+Third, it enables hardware-in-the-loop simulation to verify component
+performance. Together these make the model a candidate digital twin of the
+vehicle.
+
+The remainder of this paper is organized as follows. Section~[X] defines the
+coordinate frames and notation. Section~[X] derives the rigid-body, motor, and
+propeller models. Section~[X] describes the sensor models and the control
+architecture. Section~[X] covers the Simulink implementation. Section~[X]
+presents parameter identification and validation results, and Section~[X]
+gives conclusions and future work.
+\section{System Overview}
+
+\section{Mathematical Modeling}
 
 %Total List of assumptions made 
 \subsection{Assumptions}
@@ -93,12 +156,12 @@ From Wilselby:
 %Relating Coordinate Frames
 \subsection{Coordinate Frames}
 {When designing a kinematic model of a system, one of the first considerations that must be made is the coordinate systems of interest. Every vector will act within one of these frames and with respect to them. The system we're designing for will receive positional information from IMUs (Internal Motion Unit). These units produce readings of acceleration and gyration with respect to axes that are attached to the body of the quadrotor. Additionally, an inertial frame is necessary so that the forces acting on the body can be converted into actual flight dynamics, with states that are in reference to a physical location in a "task space". } 
-\subsubsection{Defining Coordinate Frames}
+\subsubsection{Inertial (Global) frame and body frame definitions}
 The first step I will take is to draw a simple diagram of the quadrotor in the task space, drawing on it two relevant frames, this can be seen in Figure [\ref{fig:GBF}].
 \begin{figure}[H]
     \centering
-    \caption{Relevant Frames and Parameters}
     \includegraphics[width=0.8\linewidth]{GBF.png}
+    \caption{Relevant Frames and Parameters}
     \label{fig:GBF}
 \end{figure}
 \begin{itemize}
@@ -109,68 +172,44 @@ As you can see in Figure [\ref{fig:GBF}], the position of the vehicle can be mea
 
 \subsubsection{Coordinate Frame Transformations}
 We need to be able to transform vectors between these two frames, given that all of our control inputs and sensor information take place in the body frame. Generally there are two methods used to achieve this, Euler angles and Quaternions.
-\begin{center}
-\large
-    \textbf{\ul{Euler Angles}}
-\end{center}
- Euler angles describe the transformation frome one frame to another as a series of rotations about its axes. A typically used sequence in Aerospace and Robotics applications is the Z-Y-X (yaw, pitch, roll)(3,2,1) sequence.
-When using this sequence to transform from the body frame\{b\} to the global frame\{G\}, we first rotate about the $z_b$ axis by angle $\psi$, and arrive at the first intermediate frame \{b'\} with axes ($x_b'\;,y_b'\,,z_b'$). Then, we rotate about $y_b'$ by angle $\theta$ (pitching the vehicle), arriving at the second intermediate frame  \{b''\} with axes ($x_b''\;,y_b''\,,z_b''$). Finally rotating about the $x'_b$ axis by angle $\phi$ (roll), and arrive at Frame \{G\}. These steps are visualized below, and are valid for any transformation between axis.
-\begin{center}
-    \begin{tikzpicture}
-        \draw [blue!60!black][-Stealth](0,0,0) -- (0,0,2) node [left]{$z_b,z'_b$};
-        \draw [blue!60!black][-Stealth](0,0,0) -- (0,2,0) node [above]{$y_b$};
-        \draw [blue!60!black][-Stealth](0,0,0) -- (2,0,0) node [right]{$x_b$};
 
-        \draw [green!60!black][-Stealth](0,0,0) -- (1.88,-0.68,0) node [right]{$x'_b$};
-        \draw [green!60!black][-Stealth](0,0,0) -- (0.68,1.88,0) node [above]{$y'_b$};
-        \draw [green!60!black][-Stealth](0,0,0) -- (0,0,2) ;
-        \draw [green!60!black, ->] (1.2,0,0) arc (0:-20:1.2) node [midway, right=2pt] {$\psi$};
-    \end{tikzpicture}
-    \begin{tikzpicture}
-        \draw [green!60!black][-Stealth](0,0,0) -- (1.88,-0.68,0) node [right]{$x'_b$};
-        \draw [green!60!black][-Stealth](0,0,0) -- (0.68,1.88,0) node [above]{$y'_b,\,y''_b$};
-        \draw [green!60!black][-Stealth](0,0,0) -- (0,0,2) node [left]{$z_b$};
-        
-        \draw [red!60!black][-Stealth](0,0,0) -- (1.6,-0.6,1) node [right]{$x'_b$};
-        \draw [red!60!black][-Stealth](0,0,0) -- (0.68,1.88,0) ;
-        \draw [red!60!black][-Stealth](0,0,0) -- (-0.93,0.34,1.73)node [left]{$z'_b$} ;
-        
-        \draw [red!70!black, ->] (.9,-0.35,0) arc (0:-30:0.5) node [midway, right=2pt] {\small$\theta$};
-    \end{tikzpicture}
-    \begin{tikzpicture}
-        \draw [red!60!black][-Stealth](0,0,0) -- (1.6,-0.6,1) node [right]{$x''_b,\,X^G$};
-        \draw [red!60!black][-Stealth](0,0,0) -- (0.68,1.88,0) node [right]{$y''_b$};
-        \draw [red!60!black][-Stealth](0,0,0) -- (-0.93,0.34,1.73)node [left]{$z''_b$} ;
-        
-        \draw [black,thick][-Stealth](0,0,0) -- (1.6,-0.6,1) ;
-        \draw [black,thick][-Stealth](0,0,0) -- (1.062,1.457,-0.866) node [right]{$Y^G$};
-        \draw [black,thick][-Stealth](0,0,0) -- (-0.472,1.236,1.5)node [left]{$Z^G$} ;
-        
-        \draw [ ->] (-0.24,0.6,0.75) arc (0:-30:0.8) node [midway, left=2pt] {\small$\phi$};
-    \end{tikzpicture}
-\end{center}
-These rotations can be described with trigonometric functions, for example, from frame $b \xrightarrow{} b'$:
+ Euler angles describe the transformation frome one frame to another as a series of rotations about its axes. A typically used sequence in Aerospace and Robotics applications is the Z-Y-X (yaw, pitch, roll)(3,2,1) sequence.
+ 
+Starting from the global frame $\{G\}$, the Z-Y-X sequence first rotates
+about $Z^G$ by the yaw angle $\psi$, producing the intermediate frame
+$\{b'\}$. A rotation about $y'_b$ by the pitch angle $\theta$ produces
+$\{b''\}$, and a final rotation about $x''_b$ by the roll angle $\phi$
+produces the body frame $\{b\}$. Each elementary matrix maps components
+expressed in the newer frame into the previous frame:
+$\mathbf{v}^{G}=R_z(\psi)\,\mathbf{v}^{b'}$,
+$\mathbf{v}^{b'}=R_y(\theta)\,\mathbf{v}^{b''}$, and
+$\mathbf{v}^{b''}=R_x(\phi)\,\mathbf{v}^{b}$. Composing them gives
+$\mathbf{v}^{G}=R_b^G\,\mathbf{v}^{b}$ with $R_b^G=R_z(\psi)R_y(\theta)R_x(\phi)$.
+
+\input{ZYXEuler}
+
+These rotations can be described with trigonometric functions, for example, the components of a vector expressed in frame $\{b'\}$ can be expressed in frame $\{G\}$ (that is, from frame $b' \xrightarrow{} G$) as:
 \begin{align*}
-    x'_b &=\cos(\psi)x_b-sin(\psi)y_b\\
-    y'_b &=  \sin(\psi)x_b +\cos(\psi)\,y_b \\
-    z'_b &= z_b
+    v^{G}_x &=\cos(\psi)\,v^{b'}_x-\sin(\psi)\,v^{b'}_y\\
+    v^{G}_y &=  \sin(\psi)\,v^{b'}_x +\cos(\psi)\,v^{b'}_y \\
+    v^{G}_z &= v^{b'}_z
 \end{align*}
 In  Matrix Form this becomes:
 $$\begin{bmatrix}
-    x'_b\\y'_b\\z'_b
+    v^{G}_x\\v^{G}_y\\v^{G}_z
 \end{bmatrix} = 
 \begin{bmatrix}
     \cos(\psi) & -\sin(\psi) & 0\\
-    \sin(\psi) & \cos(psi) & 0\\
+    \sin(\psi) & \cos(\psi) & 0\\
     0 & 0& 1
 \end{bmatrix}\begin{bmatrix}
-    x_b\\y_b\\z_b
+    v^{b'}_x\\v^{b'}_y\\v^{b'}_z
 \end{bmatrix}$$
-Repeating this process for rotations about each successive axis we get the following matrices:
+Repeating this process for rotations about each successive axis we get the following matrices, where $\mathbf{v}^{b''}=R_x(\phi)\,\mathbf{v}^{b}$ and $\mathbf{v}^{b'}=R_y(\theta)\,\mathbf{v}^{b''}$:
 
 $$
     R_x(\phi) = \begin{bmatrix}
-        1&0&0\\0&\cos\phi&-\sin\phi&\\0&\sin\phi&cos\phi
+        1&0&0\\0&\cos\phi&-\sin\phi\\0&\sin\phi&\cos\phi
     \end{bmatrix},\;\;
     R_y(\theta) =\begin{bmatrix}
         \cos\theta&0&\sin\theta\\0&1&0\\-\sin\theta&0&\cos\theta
@@ -179,53 +218,49 @@ $$
         \cos\psi & -\sin\psi &0\\\sin\psi&\cos\psi & 0\\0&0&1
     \end{bmatrix}
 $$
-Post multiplying the Standard Z-Y-X Euler Sequence to get the final rotational matrix from the body frame to the global frame$R_b^G$:
+Post multiplying the Standard Z-Y-X Euler Sequence to get the final rotational matrix from the body frame to the global frame $R_b^G$, such that $\mathbf{v}^{G}=R_b^G\,\mathbf{v}^{b}$:
 $$R_b^G = R_z(\psi) R_y(\theta) R_x(\phi) = \begin{bmatrix} \cos\psi & -\sin\psi & 0 \\ \sin\psi & \cos\psi & 0 \\ 0 & 0 & 1 \end{bmatrix} \begin{bmatrix} \cos\theta & 0 & \sin\theta \\ 0 & 1 & 0 \\ -\sin\theta & 0 & \cos\theta \end{bmatrix} \begin{bmatrix} 1 & 0 & 0 \\ 0 & \cos\phi & -\sin\phi \\ 0 & \sin\phi & \cos\phi \end{bmatrix}$$
 \begin{equation} R_b^G = \begin{bmatrix}   c_\psi c_\theta &  c_\psi s_\theta s_\phi -  s_\psi c_\phi &  c_\psi s_\theta c_\phi +  s_\psi s_\phi \\  s_\psi c_\theta &  s_\psi s_\theta s_\phi +  c_\psi c_\phi &  s_\psi s_\theta c_\phi -  c_\psi s_\phi \\ - s_\theta &  c_\theta s_\phi &  c_\theta c_\phi  
 \end{bmatrix}
 \label{eq:R_b^G}\end{equation}
-
-
-
-
 \subsubsection{Kinematic Relationship Between Body Rates and Euler Rates}
-Given that the euler angles (and therefore rates) occur in a ZYX sequence as shown in the previous section, and, the body rates occur in the final transformed frame, the two must be related via a series of rotations. Following the ZYX rotation our euler angles measure the following:
+Given that the Euler angles (and therefore rates) occur in a ZYX sequence as shown in the previous section, and, the body rates occur in the final transformed frame, the two must be related via a series of rotations. Following the ZYX rotation our Euler angles measure the following:
 
 \begin{itemize}
-    \item Yaw ($\psi$): Rotation about the initial inertial $Z$-axis ($Z_0$) by angle $\psi$.
-    \item Pitch ($\theta$): Rotation about the intermediate $y'$-axis by angle $\theta$.
-    \item Roll ($\phi$): Rotation about the final body $x''$-axis (or $x_b$) by angle $\phi$.
+    \item Yaw ($\psi$): Rotation about the initial inertial $Z^G$-axis by angle $\psi$.
+    \item Pitch ($\theta$): Rotation about the intermediate $y'_b$-axis by angle $\theta$.
+    \item Roll ($\phi$): Rotation about the final body $x''_b$-axis (or $x_b$) by angle $\phi$.
 \end{itemize}
 Meaning, the angular velocity of each would be defined:
 
 \begin{itemize}
-    \item $\dot{\psi}$ acts along the inertial $Z_0$-axis: $\boldsymbol{\omega}_{\psi} = [0, 0, \dot{\psi}]^T$
-    \item $\dot{\theta}$ acts along the intermediate $y'$-axis: $\boldsymbol{\omega}_{\theta} = [0, \dot{\theta}, 0]^T$
+    \item $\dot{\psi}$ acts along the inertial $Z^G$-axis: $\boldsymbol{\omega}_{\psi} = [0, 0, \dot{\psi}]^T$
+    \item $\dot{\theta}$ acts along the intermediate $y'_b$-axis: $\boldsymbol{\omega}_{\theta} = [0, \dot{\theta}, 0]^T$
     \item $\dot{\phi}$ acts along the body $x_b$-axis: $\boldsymbol{\omega}_{\phi} = [\dot{\phi}, 0, 0]^T$
 \end{itemize}
 \textbf{Transforming Rates to the Body Axis:}\\
 \noindent The first derivative of \textit{roll} ($\dot{\phi}$) already acts along the body $x_b$-axis, and therefore can be simply defined:
-$$\boldsymbol{\omega}_{\phi}^B = \begin{bmatrix} \dot{\phi} \\ 0 \\ 0 \end{bmatrix}$$
+$$\boldsymbol{\omega}_{\phi}^b = \begin{bmatrix} \dot{\phi} \\ 0 \\ 0 \end{bmatrix}$$
 
-\noindent The first derivative of \textit{pitch} ($\dot{\theta}$) acts along the intermediate y' axis, and, therefore must be rotated by $\phi$ about the x-axis: 
-$$\boldsymbol{\omega}_{\theta}^B = R_x(\phi) \begin{bmatrix} 0 \\ \dot{\theta} \\ 0 \end{bmatrix} = \begin{bmatrix} 1 & 0 & 0 \\ 0 & \cos\phi & -\sin\phi \\ 0 & \sin\phi & \cos\phi \end{bmatrix} \begin{bmatrix} 0 \\ \dot{\theta} \\ 0 \end{bmatrix}$$
- $$\boldsymbol{\omega}_{\theta}^B= \begin{bmatrix} 0 \\ \dot{\theta}\cos\phi \\ \dot{\theta}\sin\phi \end{bmatrix}$$
-\noindent The first derivative of \textit{yaw} ($\dot{\psi}$) acts along the inertial $Z_o$-axis and therefore must be rotated twice (by the pitch angle and roll angle). 
-$$\boldsymbol{\omega}_{\psi}^B = R_x(\phi) R_y(\theta) \begin{bmatrix} 0 \\ 0 \\ \dot{\psi} \end{bmatrix} = \begin{bmatrix} 1 & 0 & 0 \\ 0 & \cos\phi & -\sin\phi \\ 0 & \sin\phi & \cos\phi \end{bmatrix} \begin{bmatrix} \cos\theta & 0 & \sin\theta \\ 0 & 1 & 0 \\ -\sin\theta & 0 & \cos\theta \end{bmatrix} \begin{bmatrix} 0 \\ 0 \\ \dot{\psi} \end{bmatrix}$$
-$$\boldsymbol{\omega}_{\psi}^B = \begin{bmatrix} -\dot{\psi}\sin\theta \\ \dot{\psi}\cos\theta\sin\phi \\ \dot{\psi}\cos\theta\cos\phi \end{bmatrix}$$
-\textbf{Summing components to form $\omega^B$}
-$$\begin{bmatrix} p \\ q \\ r \end{bmatrix} = \boldsymbol{\omega}_{\phi}^B + \boldsymbol{\omega}_{\theta}^B + \boldsymbol{\omega}_{\psi}^B = \begin{bmatrix} \dot{\phi} - \dot{\psi}\sin\theta \\ \dot{\theta}\cos\phi + \dot{\psi}\cos\theta\sin\phi \\ -\dot{\theta}\sin\phi + \dot{\psi}\cos\theta\cos\phi \end{bmatrix}$$
+\noindent The first derivative of \textit{pitch} ($\dot{\theta}$) acts along the intermediate $y'_b$ axis, and, therefore must be expressed in the body frame using the inverse rotation $R_x(\phi)^{T}$ (rotation matrices are orthogonal, so the inverse is the transpose): 
+$$\boldsymbol{\omega}_{\theta}^b = R_x(\phi)^{T} \begin{bmatrix} 0 \\ \dot{\theta} \\ 0 \end{bmatrix} = \begin{bmatrix} 1 & 0 & 0 \\ 0 & \cos\phi & \sin\phi \\ 0 & -\sin\phi & \cos\phi \end{bmatrix} \begin{bmatrix} 0 \\ \dot{\theta} \\ 0 \end{bmatrix}$$
+ $$\boldsymbol{\omega}_{\theta}^b= \begin{bmatrix} 0 \\ \dot{\theta}\cos\phi \\ -\dot{\theta}\sin\phi \end{bmatrix}$$
+\noindent The first derivative of \textit{yaw} ($\dot{\psi}$) acts along the inertial $Z^G$-axis and therefore must be rotated twice, using the inverse rotations for the pitch angle and roll angle. 
+$$\boldsymbol{\omega}_{\psi}^b = R_x(\phi)^{T} R_y(\theta)^{T} \begin{bmatrix} 0 \\ 0 \\ \dot{\psi} \end{bmatrix} = \begin{bmatrix} 1 & 0 & 0 \\ 0 & \cos\phi & \sin\phi \\ 0 & -\sin\phi & \cos\phi \end{bmatrix} \begin{bmatrix} \cos\theta & 0 & -\sin\theta \\ 0 & 1 & 0 \\ \sin\theta & 0 & \cos\theta \end{bmatrix} \begin{bmatrix} 0 \\ 0 \\ \dot{\psi} \end{bmatrix}$$
+$$\boldsymbol{\omega}_{\psi}^b = \begin{bmatrix} -\dot{\psi}\sin\theta \\ \dot{\psi}\cos\theta\sin\phi \\ \dot{\psi}\cos\theta\cos\phi \end{bmatrix}$$
+\textbf{Summing components to form $\boldsymbol{\omega}^b$}\\
+\noindent Once all three angular velocities are expressed in the same (body) frame, they add as vectors:
+$$\begin{bmatrix} p \\ q \\ r \end{bmatrix} = \boldsymbol{\omega}_{\phi}^b + \boldsymbol{\omega}_{\theta}^b + \boldsymbol{\omega}_{\psi}^b = \begin{bmatrix} \dot{\phi} - \dot{\psi}\sin\theta \\ \dot{\theta}\cos\phi + \dot{\psi}\cos\theta\sin\phi \\ -\dot{\theta}\sin\phi + \dot{\psi}\cos\theta\cos\phi \end{bmatrix}$$
 Re-writing this expression in Matrix form, we get a matrix that maps Euler rates to body rates:
 $$\begin{bmatrix} p \\ q \\ r \end{bmatrix} = \begin{bmatrix} 1 & 0 & -\sin\theta \\ 0 & \cos\phi & \cos\theta\sin\phi \\ 0 & -\sin\phi & \cos\theta\cos\phi \end{bmatrix} \begin{bmatrix} \dot{\phi} \\ \dot{\theta} \\ \dot{\psi} \end{bmatrix}$$
-Inverting the matrix gives a matrix which maps body rates to euler rates: 
-\begin{equation}\begin{bmatrix} \dot{\phi} \\ \dot{\theta} \\ \dot{\psi} \end{bmatrix} = \begin{bmatrix} 1 & \sin\phi\tan\theta & \cos\phi\tan\theta \\ 0 & \cos\phi & -\sin\phi \\ 0 & \frac{\sin\phi}{\cos\theta} & \frac{\cos\phi}{\cos\theta} \end{bmatrix}\begin{bmatrix} p \\ q \\ r \end{bmatrix}\end{equation}
+Inverting the matrix gives a matrix which maps body rates to Euler rates: 
+\begin{equation}\begin{bmatrix} \dot{\phi} \\ \dot{\theta} \\ \dot{\psi} \end{bmatrix} = \begin{bmatrix} 1 & \sin\phi\tan\theta & \cos\phi\tan\theta \\ 0 & \cos\phi & -\sin\phi \\ 0 & \frac{\sin\phi}{\cos\theta} & \frac{\cos\phi}{\cos\theta} \end{bmatrix}\begin{bmatrix} p \\ q \\ r \end{bmatrix}\label{eq:InvKin}\end{equation}
 
-\noindent If the Euler Angles of the quadrotor are assumed to be small during flight ($\le 10^o)$, the small angle assumption can be used which will turn the matrix above into the \textit{identity matrix} such that the body rates are roughtly equal to the first derivative of the euler angles. \vspace{0.5cm}
+\noindent If the Euler Angles of the quadrotor are assumed to be small during flight ($\le 10^\circ$), the small angle assumption can be used which will turn the matrix above into the \textit{identity matrix} such that the body rates are roughly equal to the first derivative of the Euler angles. \vspace{0.5cm}
 \\
 \hl{\textbf{A note on Gimbal Lock}}\\
-Given the physical limitations of our robot and its specific use case, we never intend to command our drone to any large pitch angles. However, in equation (2) you can see clearly where gimbal lock could become an issue in this approach. Should $\theta$ approach $90^o$, the two terms in the third row with $\theta$ in the denominator would approach infinity and the kinematics would break. This is called gimbal lock and it represents a possible singularity. For this reason, quaternions are often used for kinematics of a quadrotor. However, as stated, this shouldn't be an issue in our use case.  
-
-\section{Forces and Moments in the Body Frame}
+Given the physical limitations of our robot and its specific use case, we never intend to command our drone to any large pitch angles. However, in equation~(\ref{eq:InvKin}) you can see clearly where gimbal lock could become an issue in this approach. Should $\theta$ approach $90^\circ$, the four terms containing $\tan\theta$ or $\cos\theta$ in the denominator (in the first and third rows) would approach infinity and the kinematics would break. This is called gimbal lock and it represents a possible singularity. For this reason, quaternions are often used for kinematics of a quadrotor. However, as stated, this shouldn't be an issue in our use case.
+\subsection{Rigid Body Dynamics}
 For now, we'll focus on aerial flight with no wind, leaving us with really three forces of concern. 
 \begin{enumerate}
     \item Thrust force felt from combination of rotor thrusts
@@ -292,7 +327,7 @@ $$\boxed{
 \subsubsection{Flight Time}
 To finish this section regarding motor power, we will define a model for determining the runtime of the system as a function of it's mass (or g's of acceleration by scaling based on mass such that 1g = nominal mass, 2g = 2*(nominal mass)). Batteries have three constants of interest for these calculations: Capacity (Ah), Nominal Voltage (V), Efficiency. Using these constants and the electrical power draw from the motors determined in the previous section we get to this equation:
 $$\text{Usable Runtime (hours)} = \frac{\text{Capacity(Ah)}\times\text{ Nominal Voltage(V)}}{\text{Power Draw (Watts)}} \times \text{Efficiency Factor}$$
-\subsection{Translational Dynamics}
+\subsubsection{Translational Dynamics}
 The equations of motion are defined in the 'inertial' global reference frame. Using Newtons 2nd Law, acceleration of the quadrotor in this frame is equal to the sum of forces multiplied by the mass of the quadrotor. The sum of forces is comprised of the force of gravity ($F_g$), thrust of the motors translated from the body frame to the global inertial frame ($F_T^G$), and and the drag force ($F_d$). 
 \begin{figure}[H]
     \centering
@@ -440,13 +475,13 @@ $$m\ddot{X}^G = \begin{bmatrix}
     0\\0\\1
 \end{bmatrix}}\label{eq:ddotX^G}\end{equation}
 
-\subsection{Rotational Dynamics}
+\subsubsection{Rotational Dynamics}
 Given that the mass is assumed to be distributed symmetrically about the principal axis, and, the products of inertia are also assumed to be zero, the Inertia tensor in the body frame is defined as follows:
 $$I_b = \begin{bmatrix}
     I_x&0&0\\0&I_y&0\\0&0&I_z
 \end{bmatrix}$$
 As the physical design continues to be finalized, the model may be updated and tuned to our specific geometries, however, we have made certain design considerations such that the center of mass can be tuned with respect to the sensors, as well as the motors. 
-\subsubsection{Transport Theorem}
+\textbf{Transport Theorem}
 Using Newtons second for rotational motion, the net torque on a body equals the rate of change angular momentum ($\frac{dH}{dt}$).
 $$\sum\tau =\left(\frac{dH}{dt}\right)_{inertial}  = \left(\frac{d(I\omega)}{dt}\right)_{inertial} $$
 This, however is only true when viewed from an inertial frame. In this analysis, we will consider the vehicles Euler angles and body rotational rates as states. These are measured in the body frame, and therefore, the equation above doesn't apply. The Transport Theorem (also referred to as the Coriolis or rate-of-change transport theorem) describes how two reference frames which are rotating with respect to each other observe the same rate of change.
