@@ -633,52 +633,8 @@ Our states are
     \item $\dot{\psi}$
 \end{itemize}
 
-The derivatives of these states have been defined in the previous sections, and, are summarized here as the full equations of motion:\tiny
-\begin{align*}
-\begin{bmatrix}
-    \dot{X}^G\\\dot{Y}^G\\\dot{Z}^G
-\end{bmatrix} &= \underbrace{\begin{bmatrix}   c_\psi c_\theta &  c_\psi s_\theta s_\phi -  s_\psi c_\phi &  c_\psi s_\theta c_\phi +  s_\psi s_\phi \\  s_\psi c_\theta &  s_\psi s_\theta s_\phi +  c_\psi c_\phi &  s_\psi s_\theta c_\phi -  c_\psi s_\phi \\ - s_\theta &  c_\theta s_\phi &  c_\theta c_\phi  
-\end{bmatrix}}_{R_b^G}\begin{bmatrix}
-    \dot{x_b}\\\dot{y_b}\\\dot{z_b}
-\end{bmatrix}\\\\
-\begin{bmatrix}
-    \ddot{X}^G\\\ddot{Y}^G\\\ddot{Z}^G
-\end{bmatrix} &= \begin{bmatrix}
-0\\0\\g
-\end{bmatrix}-\underbrace{\begin{bmatrix}
-    \frac{K_{d,x}}{m}&0&0\\0&\frac{K_{d,y}}{m}&0\\0&0&\frac{K_{d,z}}{m}
-\end{bmatrix}}_{\text{Body Drag Coeff. Matrix}}
-\begin{bmatrix}
-    \dot{X}^G\\\dot{Y}^G\\\dot{Z}^G
-\end{bmatrix} +\underbrace{\begin{bmatrix}   c_\psi c_\theta &  c_\psi s_\theta s_\phi -  s_\psi c_\phi &  c_\psi s_\theta c_\phi +  s_\psi s_\phi \\  s_\psi c_\theta &  s_\psi s_\theta s_\phi +  c_\psi c_\phi &  s_\psi s_\theta c_\phi -  c_\psi s_\phi \\ - s_\theta &  c_\theta s_\phi &  c_\theta c_\phi  
-\end{bmatrix}}_{R_b^G} \underbrace{\begin{bmatrix}
-    0\\0\\\frac{-1}{m}\left(K_{T_1}\omega_1^2+K_{T_2}\omega^2_2+K_{T_3}\omega^2_3 + K_{T_4}\omega_4^2\right)
-\end{bmatrix}}_{\text{Motor Control Force}}\\\\
-\begin{bmatrix} \dot{\phi} \\ \dot{\theta} \\ \dot{\psi} \end{bmatrix} &= \begin{bmatrix} 1 & \sin\phi\tan\theta & \cos\phi\tan\theta \\ 0 & \cos\phi & -\sin\phi \\ 0 & \frac{\sin\phi}{\cos\theta} & \frac{\cos\phi}{\cos\theta} \end{bmatrix}\begin{bmatrix} p \\ q \\ r \end{bmatrix}\\\\
-\begin{bmatrix}
-    \ddot{\phi}\\\ddot{\theta}\\\ddot{\psi}
-\end{bmatrix} &= \underbrace{\begin{bmatrix}
-    \frac{1}{I_x}&0&0\\0&\frac{1}{I_y}&0\\0&0&\frac{1}{I_z}
-\end{bmatrix}}_{\text{Inverse $I_b$ Matrix}}\left( \underbrace{\begin{bmatrix}
-    \dot{\phi}\\\dot{\theta}\\\dot{\psi}
-\end{bmatrix}\times\left[\begin{array}{c}
-0\\
-0\\
-I_r \,{\left(\omega_1 -\omega_2 +\omega_3 -\omega_4 \right)}
-\end{array}\right]}_{\text{Gyroscopic Precession from Propellers}}-\underbrace{
-\begin{bmatrix}
-    \dot{\phi}\\\dot{\theta}\\\dot{\psi}
-\end{bmatrix}
-\times \begin{bmatrix}
-    I_x&0&0\\0&I_y&0\\0&0&I_z
-\end{bmatrix}\begin{bmatrix}
-    \dot{\phi}\\\dot{\theta}\\\dot{\psi}
-\end{bmatrix}}_{\text{Gyroscopic Cross Coupling (Eulers)}}\right)  +\underbrace{\begin{bmatrix}
-    \frac{L_{F,y}}{I_x}\,\left(K_{T_1}\omega_3^2+K_{T_2}\omega^2_2-K_{T_3}\omega^2_4-K_{T_4}\omega^2_1\right)\\
-    \frac{L_{F,x}}{I_y}\,\left(K_{T_1}\omega_4^2+K_{T_1}\omega^2_3-K_{T_1}\omega^2_2-K_{T_1}\omega^2_1\right)\\
-    \frac{1}{I_z}(K_{D_1}\omega_1^2-K_{D_2}\omega_2^2+K_{D_3}\omega_3^2-K_{D_4}\omega_4^2)
-\end{bmatrix}}_{\text{Motor Control Torques}}
-\end{align*}
+The derivatives of these states have been defined in the previous sections, and, are summarized here as the full equations of motion:
+
 \begin{align*}
 \begin{bmatrix}\dot X^G\\\dot Y^G\\\dot Z^G\end{bmatrix} &= \begin{bmatrix}V_X\\V_Y\\V_Z\end{bmatrix}\\[6pt]
 \begin{bmatrix}\dot V_X\\\dot V_Y\\\dot V_Z\end{bmatrix} &=
