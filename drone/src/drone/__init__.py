@@ -1,0 +1,1 @@
+"""Onboard software for the amphibious drone (Raspberry Pi 5 + Pixhawk/ArduPilot)."""
